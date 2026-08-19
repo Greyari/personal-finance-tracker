@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+
+      // Profile hanya dapat dibaca/ditulis oleh pemiliknya.
+      match /profile/{document=**} {
+        allow read, write: if request.auth != null
+                          && request.auth.uid == userId;
+      }
+
+      // Phase 2:
+      // transactions
+      // budgets
+      // saving_goals
+      // investments
+      // categories
+      // recurring_transactions
+      //
+      // Akan ditambahkan nanti dengan ownership check yang sama.
+    }
+  }
+}
