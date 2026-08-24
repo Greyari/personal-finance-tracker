@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../categories/data/repositories/category_repository.dart';
+import '../../../recurring/data/repositories/recurring_transaction_repository.dart';
 import '../../data/models/app_user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/user_repository.dart';
@@ -34,9 +36,15 @@ final userProfileProvider = StreamProvider<AppUserModel?>((ref) {
 class AuthController extends StateNotifier<AsyncValue<void>> {
   final AuthRepository _authRepository;
   final UserRepository _userRepository;
+  final CategoryRepository _categoryRepository;
+  final RecurringTransactionRepository _recurringRepository;
 
-  AuthController(this._authRepository, this._userRepository)
-      : super(const AsyncValue.data(null));
+  AuthController(
+    this._authRepository,
+    this._userRepository,
+    this._categoryRepository,
+    this._recurringRepository,
+  ) : super(const AsyncValue.data(null));
 
   Future<bool> signIn(
       {required String email, required String password}) async {
@@ -69,6 +77,24 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
           displayName: displayName.trim(),
         ),
       );
+      // Give every new user a starting set of categories (Section 6 of
+      // the spec) so Transactions isn't empty/unusable on first login.
+      // Guarded internally against double-seeding, so it's safe even if
+      // register() were somehow retried.
+      await _categoryRepository.seedDefaultCategoriesIfNeeded(user.uid);
+
+      // Section 13: default "Gereja 10%" recurring config, linked to the
+      // "Gereja" category that seeding above just created. Looked up by
+      // name rather than hardcoding an ID, since category IDs are
+      // Firestore-generated.
+      final gerejaCategoryId =
+          await _categoryRepository.getCategoryIdByName(user.uid, 'Gereja');
+      if (gerejaCategoryId != null) {
+        await _recurringRepository.seedDefaultChurchRecurringIfNeeded(
+          userId: user.uid,
+          categoryId: gerejaCategoryId,
+        );
+      }
       state = const AsyncValue.data(null);
       return true;
     } catch (e, st) {
@@ -99,5 +125,10 @@ final authControllerProvider =
   return AuthController(
     ref.watch(authRepositoryProvider),
     ref.watch(userRepositoryProvider),
+    // Instantiated directly rather than via their respective feature
+    // providers to avoid circular imports (category_providers.dart and
+    // recurring_providers.dart both already import from this file).
+    CategoryRepository(),
+    RecurringTransactionRepository(),
   );
 });

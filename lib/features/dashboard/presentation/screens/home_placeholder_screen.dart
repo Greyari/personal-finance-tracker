@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 
-/// TEMPORARY placeholder shown right after login.
+/// TEMPORARY pla`ceholder shown right after login.
 ///
 /// The real dashboard (income/expense totals, budget progress, daily
 /// spending limit, etc.) is built in Phase 3, per the phased plan. This

@@ -1,25 +1,191 @@
 rules_version = '2';
 
+// =============================================================================
+// Phase 7 security audit summary
+// -----------------------------------------------------------------------------
+// - Every collection is scoped under /users/{userId} and gated by isOwner(),
+//   so a user can never read or write another user's data. Anything not
+//   explicitly matched below is denied by default (Firestore's default-deny).
+// - Every document that stores a `userId` field is checked so that field
+//   cannot be changed on update — without this, a modified client could
+//   rewrite `userId` on an existing doc it owns to try to reassign or
+//   orphan data. The path-level isOwner() check alone does not prevent this,
+//   since it only validates *where* the write happens, not the field values.
+// - create/update rules validate types and required-positive-number business
+//   rules (amount > 0, percentage <= 100, etc.) so they hold even if a
+//   compromised or hand-rolled client bypasses the app's own form validation.
+// - Rules intentionally do NOT attempt cross-document validation (e.g. "total
+//   budget must not exceed income") since Firestore rules cannot cheaply read
+//   sibling documents at write time. That check lives in the app instead
+//   (see totalActiveBudgetProvider) as a visible warning, not a hard block.
+// =============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userId} {
 
-      // Profile hanya dapat dibaca/ditulis oleh pemiliknya.
-      match /profile/{document=**} {
-        allow read, write: if request.auth != null
-                          && request.auth.uid == userId;
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
       }
 
-      // Phase 2:
-      // transactions
-      // budgets
-      // saving_goals
-      // investments
-      // categories
-      // recurring_transactions
-      //
-      // Akan ditambahkan nanti dengan ownership check yang sama.
+      // True if `field` is unchanged between the existing document and the
+      // incoming write — used to make a field immutable after creation.
+      function unchanged(field) {
+        return request.resource.data[field] == resource.data[field];
+      }
+
+      // Profile: exactly one document ('data') per user, holding email +
+      // displayName. Matched directly rather than with a {document=**}
+      // wildcard, since there is never more than this one document.
+      // Email is sourced from Firebase Auth at registration and is not
+      // meant to drift from it via a Firestore edit.
+      match /profile/{profileDocId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.email is string
+          && request.resource.data.displayName is string;
+        allow update: if isOwner()
+          && unchanged('email')
+          && request.resource.data.displayName is string;
+        allow delete: if isOwner();
+      }
+
+      // Categories: type is immutable after creation — changing an
+      // existing category's type would silently reclassify every past
+      // transaction that already references it (see CategoryModel's
+      // toMapForUpdate, which never sends `type` for exactly this reason).
+      match /categories/{categoryId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.type in ['income', 'expense', 'saving', 'investment'];
+        allow update: if isOwner()
+          && unchanged('type')
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0;
+        allow delete: if isOwner();
+      }
+
+      // Transactions: amount must always be > 0 (business rule 6).
+      // userId is immutable once set — type/categoryId/amount/date/
+      // description remain editable, matching what the edit form allows.
+      match /transactions/{transactionId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.userId == userId
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.type in ['income', 'expense', 'saving', 'investment'];
+        allow update: if isOwner()
+          && unchanged('userId')
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.type in ['income', 'expense', 'saving', 'investment'];
+        allow delete: if isOwner();
+      }
+
+      // Budgets: "Budget tidak boleh negatif" (value > 0), percentage
+      // capped at 100, userId immutable once set.
+      match /budgets/{budgetId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.userId == userId
+          && request.resource.data.categoryId is string
+          && request.resource.data.value is number
+          && request.resource.data.value > 0
+          && (request.resource.data.isPercentage == false || request.resource.data.value <= 100);
+        allow update: if isOwner()
+          && unchanged('userId')
+          && request.resource.data.value is number
+          && request.resource.data.value > 0
+          && (request.resource.data.isPercentage == false || request.resource.data.value <= 100);
+        allow delete: if isOwner();
+      }
+
+      // Saving goals: targetAmount must be positive; userId immutable.
+      match /saving_goals/{goalId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.userId == userId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.targetAmount is number
+          && request.resource.data.targetAmount > 0;
+        allow update: if isOwner()
+          && unchanged('userId')
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.targetAmount is number
+          && request.resource.data.targetAmount > 0
+          && request.resource.data.currentAmount is number;
+        allow delete: if isOwner();
+
+        // Contribution history: additions only, amount must be positive.
+        // currentAmount on the parent goal is updated in the same
+        // Firestore transaction as this write (see
+        // SavingGoalRepository.addContribution) — this rule can't
+        // independently re-verify that sum, so the client-side atomic
+        // transaction is what keeps the two in sync.
+        match /contributions/{contributionId} {
+          allow read: if isOwner();
+          allow create: if isOwner()
+            && request.resource.data.amount is number
+            && request.resource.data.amount > 0;
+          allow update, delete: if false; // append-only history
+        }
+      }
+
+      // Investments: manual tracking only (no broker integration, per
+      // Section 12). capital must be positive so return % stays
+      // well-defined; currentValue may be 0 (a total loss is valid).
+      // userId immutable once set.
+      match /investments/{investmentId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.userId == userId
+          && request.resource.data.categoryId is string
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.capital is number
+          && request.resource.data.capital > 0
+          && request.resource.data.currentValue is number
+          && request.resource.data.currentValue >= 0;
+        allow update: if isOwner()
+          && unchanged('userId')
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.capital is number
+          && request.resource.data.capital > 0
+          && request.resource.data.currentValue is number
+          && request.resource.data.currentValue >= 0;
+        allow delete: if isOwner();
+      }
+
+      // Recurring transactions: same nominal/percentage validation as
+      // budgets, userId immutable. Transactions this config generates
+      // land in /transactions (rules above), tagged with recurringId +
+      // generatedPeriod for the duplicate-prevention check in
+      // RecurringTransactionRepository.generateForPeriodIfNeeded.
+      match /recurring_transactions/{recurringId} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+          && request.resource.data.userId == userId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.value is number
+          && request.resource.data.value > 0
+          && (request.resource.data.isPercentage == false || request.resource.data.value <= 100)
+          && request.resource.data.type in ['income', 'expense', 'saving', 'investment'];
+        allow update: if isOwner()
+          && unchanged('userId')
+          && request.resource.data.value is number
+          && request.resource.data.value > 0
+          && (request.resource.data.isPercentage == false || request.resource.data.value <= 100)
+          && request.resource.data.type in ['income', 'expense', 'saving', 'investment'];
+        allow delete: if isOwner();
+      }
     }
   }
 }

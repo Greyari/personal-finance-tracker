@@ -17,6 +17,9 @@ class FirestoreCollections {
   static const String categories = 'categories';
   static const String recurringTransactions = 'recurring_transactions';
 
+  /// Subcollection under users/{userId}/saving_goals/{goalId}
+  static const String contributions = 'contributions';
+
   /// The profile subcollection currently holds a single document,
   /// since a user only ever has one profile.
   static const String profileDocId = 'data';
