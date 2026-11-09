@@ -1,13 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/models/transaction_type.dart';
-import '../../../../shared/providers/selected_month_provider.dart';
 import '../../../budgets/presentation/providers/budget_providers.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 
-/// Section 8 of the spec: this month's totals, computed live from
-/// transactions — never hardcoded, never stored separately from the
-/// transactions that produce them.
+/// Live summary of this month's totals, computed directly from transactions.
 class MonthlySummary {
   final double totalIncome;
   final double totalExpense;
@@ -23,6 +20,9 @@ class MonthlySummary {
 
   /// "Sisa" — money not yet spent, saved, or invested this month.
   double get sisa => totalIncome - totalExpense - totalSaving - totalInvestment;
+
+  /// Net Cashflow: Uang Masuk dikurangi Uang Keluar (Pemasukan - Pengeluaran)
+  double get netCashFlow => totalIncome - totalExpense;
 
   double get savingRate => totalIncome <= 0 ? 0 : (totalSaving / totalIncome) * 100;
   double get investmentRate => totalIncome <= 0 ? 0 : (totalInvestment / totalIncome) * 100;
@@ -45,9 +45,7 @@ final monthlySummaryProvider = Provider<MonthlySummary>((ref) {
 });
 
 /// "Persentase budget terpakai": total spent vs total budgeted, counting
-/// only *expense*-category budgets — saving/investment budgets are
-/// allocations the user chooses to make, not a spending cap, so they're
-/// excluded from this particular percentage.
+/// only *expense*-category budgets.
 final budgetUsedPercentProvider = Provider<double>((ref) {
   final expenseBudgets = ref
       .watch(budgetProgressListProvider)
@@ -59,11 +57,8 @@ final budgetUsedPercentProvider = Provider<double>((ref) {
   return (totalSpent / totalBudgeted) * 100;
 });
 
-/// Section 10: "Batas pengeluaran hari ini" — remaining expense budget
-/// divided by remaining days in the month. Only meaningful for the
-/// month that's actually in progress; browsing a past or future month
-/// returns null and the UI hides the card rather than showing a
-/// misleading number.
+/// "Batas pengeluaran hari ini" — remaining expense budget divided by remaining days in the month.
+/// Returns null if the user is not viewing the current month, or if no active expense budget exists.
 final dailySpendingLimitProvider = Provider<double?>((ref) {
   final selectedMonth = ref.watch(selectedMonthProvider);
   final now = DateTime.now();
@@ -75,6 +70,8 @@ final dailySpendingLimitProvider = Provider<double?>((ref) {
       .where((p) => p.budget.isActive && p.categoryType == TransactionType.expense);
 
   final totalBudgeted = expenseBudgets.fold(0.0, (sum, p) => sum + p.resolvedAmount);
+  if (totalBudgeted <= 0) return null;
+
   final totalSpent = expenseBudgets.fold(0.0, (sum, p) => sum + p.spentAmount);
   final remaining = totalBudgeted - totalSpent;
 

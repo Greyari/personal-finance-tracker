@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -7,8 +8,9 @@ import '../../../../core/utils/currency_input_formatter.dart';
 import '../../../../core/utils/error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/models/transaction_type.dart';
-import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/glass_widgets.dart';
+import '../../../../shared/widgets/searchable_category_field.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
 import '../../data/models/budget_model.dart';
 import '../providers/budget_providers.dart';
@@ -58,8 +60,10 @@ class _AddEditBudgetScreenState extends ConsumerState<AddEditBudgetScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_categoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih kategori terlebih dahulu.')),
+      showGlassSnackBar(
+        context,
+        'Pilih kategori terlebih dahulu.',
+        isError: true,
       );
       return;
     }
@@ -87,162 +91,198 @@ class _AddEditBudgetScreenState extends ConsumerState<AddEditBudgetScreen> {
           );
 
     if (success && mounted) {
+      showGlassSnackBar(
+        context,
+        widget.isEditing ? 'Budget berhasil diperbarui' : 'Budget berhasil dibuat',
+      );
       Navigator.of(context).pop();
     } else if (!success && mounted) {
       final error = ref.read(budgetControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ErrorMapper.toUserMessage(error))),
+      showGlassSnackBar(
+        context,
+        ErrorMapper.toUserMessage(error),
+        isError: true,
       );
     }
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlassConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Budget'),
-        content: const Text('Budget ini akan dihapus secara permanen.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      title: 'Hapus Budget',
+      message: 'Budget ini akan dihapus secara permanen.',
+      confirmLabel: 'Hapus',
+      isDestructive: true,
     );
     if (confirmed != true) return;
     final success =
         await ref.read(budgetControllerProvider.notifier).deleteBudget(widget.budget!.id);
     if (success && mounted) {
+      showGlassSnackBar(context, 'Budget telah dihapus');
       Navigator.of(context).pop();
     } else if (!success && mounted) {
       final error = ref.read(budgetControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ErrorMapper.toUserMessage(error))),
+      showGlassSnackBar(
+        context,
+        ErrorMapper.toUserMessage(error),
+        isError: true,
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
     final controllerState = ref.watch(budgetControllerProvider);
-    // Every category type is eligible for a budget (Gereja/expense,
-    // Tabungan/saving, Investasi/investment are all valid examples from
-    // the spec), so this intentionally passes null rather than filtering
-    // by TransactionType.expense.
     final categoriesAsync = ref.watch(categoriesProvider(null));
     final income = ref.watch(monthlyIncomeProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit Budget' : 'Tambah Budget'),
-        actions: [
-          if (widget.isEditing)
-            IconButton(icon: const Icon(Icons.delete_outline), onPressed: _delete),
-        ],
+        title: Text(
+          widget.isEditing ? 'Edit Budget' : 'Tambah Budget',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                categoriesAsync.when(
-                  data: (categories) => DropdownButtonFormField<String>(
-                    value: categories.any((c) => c.id == _categoryId) ? _categoryId : null,
-                    decoration: const InputDecoration(labelText: 'Kategori'),
-                    items: categories
-                        .map((c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text('${c.name} (${c.type.label})'),
-                            ))
-                        .toList(),
-                    onChanged: (value) => setState(() => _categoryId = value),
-                  ),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text('Gagal memuat kategori: $e'),
-                ),
-                const SizedBox(height: 16),
-                const Text('Tipe Budget', style: TextStyle(fontWeight: FontWeight.w600)),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RadioListTile<bool>(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Nominal'),
-                        value: false,
-                        groupValue: _isPercentage,
-                        onChanged: (value) => setState(() => _isPercentage = value!),
+                GlassCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      categoriesAsync.when(
+                        data: (categories) {
+                          final eligibleCategories = categories
+                              .where((c) =>
+                                  c.type != TransactionType.income ||
+                                  c.id == _categoryId)
+                              .toList();
+                          return SearchableCategoryField(
+                            label: 'Kategori Budget',
+                            helperText: 'Pilih pos pengeluaran, tabungan, atau investasi',
+                            categories: eligibleCategories,
+                            selectedCategoryId: _categoryId,
+                            onSelected: (val) => setState(() => _categoryId = val),
+                          );
+                        },
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, _) => Text('Gagal memuat kategori: $e'),
                       ),
-                    ),
-                    Expanded(
-                      child: RadioListTile<bool>(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Persentase'),
-                        value: true,
-                        groupValue: _isPercentage,
-                        onChanged: (value) => setState(() => _isPercentage = value!),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Tipe Budget',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (_isPercentage) ...[
-                  AppTextField(
-                    controller: _percentController,
-                    label: 'Persentase (%)',
-                    hint: 'Contoh: 10',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    validator: Validators.percentage,
+                      const SizedBox(height: 8),
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('Nominal Tetap'),
+                            icon: Icon(Icons.attach_money_rounded),
+                          ),
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('Persentase (%)'),
+                            icon: Icon(Icons.percent_rounded),
+                          ),
+                        ],
+                        selected: {_isPercentage},
+                        onSelectionChanged: (Set<bool> selected) {
+                          setState(() => _isPercentage = selected.first);
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      if (_isPercentage) ...[
+                        AppTextField(
+                          controller: _percentController,
+                          label: 'Persentase (%)',
+                          hint: 'Contoh: 10',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: Validators.percentage,
+                        ),
+                        const SizedBox(height: 8),
+                        if (income > 0)
+                          AnimatedBuilder(
+                            animation: _percentController,
+                            builder: (context, _) {
+                              final pct = double.tryParse(
+                                      _percentController.text.trim().replaceAll(',', '.')) ??
+                                  0;
+                              final estimated = income * pct / 100;
+                              return Text(
+                                '≈ ${CurrencyFormatter.format(estimated)} dari pendapatan bulan ini (${CurrencyFormatter.format(income)})',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                ),
+                              );
+                            },
+                          ),
+                      ] else
+                        AppTextField(
+                          controller: _amountController,
+                          label: 'Jumlah Nominal',
+                          hint: 'Rp0',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [CurrencyInputFormatter()],
+                          validator: (_) => Validators.amount(_amountController.text),
+                        ),
+                      const SizedBox(height: 14),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Aktifkan Budget',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Budget nonaktif tidak dihitung dalam batas pengeluaran.',
+                          style: TextStyle(
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            fontSize: 12,
+                          ),
+                        ),
+                        value: _isActive,
+                        onChanged: (value) => setState(() => _isActive = value),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  if (income > 0)
-                    // AnimatedBuilder listens to the controller directly so
-                    // this preview updates on every keystroke without
-                    // needing setState calls scattered through onChanged.
-                    AnimatedBuilder(
-                      animation: _percentController,
-                      builder: (context, _) {
-                        final pct = double.tryParse(
-                                _percentController.text.trim().replaceAll(',', '.')) ??
-                            0;
-                        final estimated = income * pct / 100;
-                        return Text(
-                          '≈ ${CurrencyFormatter.format(estimated)} dari pendapatan bulan ini (${CurrencyFormatter.format(income)})',
-                          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                        );
-                      },
-                    ),
-                ] else
-                  AppTextField(
-                    controller: _amountController,
-                    label: 'Jumlah',
-                    hint: 'Rp0',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [CurrencyInputFormatter()],
-                    validator: (_) => Validators.amount(_amountController.text),
-                  ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Aktif'),
-                  subtitle: const Text(
-                      'Budget nonaktif tidak dihitung dalam total maupun progress.'),
-                  value: _isActive,
-                  onChanged: (value) => setState(() => _isActive = value),
-                ),
-                const SizedBox(height: 16),
-                AppButton(
-                  label: 'Simpan',
+                ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 24),
+                GlassButton(
+                  label: 'Simpan Budget',
+                  icon: Icons.check_rounded,
                   isLoading: controllerState.isLoading,
                   onPressed: _save,
-                ),
+                ).animate().fadeIn(duration: 400.ms),
+                if (widget.isEditing) ...[
+                  const SizedBox(height: 12),
+                  GlassButton(
+                    label: 'Hapus Budget',
+                    icon: Icons.delete_outline_rounded,
+                    backgroundColor: AppColors.expense(context),
+                    onPressed: _delete,
+                  ).animate().fadeIn(duration: 450.ms),
+                ],
               ],
             ),
           ),

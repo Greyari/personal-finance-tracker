@@ -17,6 +17,24 @@ extension TransactionTypeX on TransactionType {
     }
   }
 
+  String get subtitle {
+    switch (this) {
+      case TransactionType.income:
+        return 'Uang Masuk';
+      case TransactionType.expense:
+        return 'Uang Keluar';
+      case TransactionType.saving:
+        return 'Alokasi Tabungan';
+      case TransactionType.investment:
+        return 'Alokasi Investasi';
+    }
+  }
+
+  bool get isIncome => this == TransactionType.income;
+  bool get isExpense => this == TransactionType.expense;
+  bool get isSaving => this == TransactionType.saving;
+  bool get isInvestment => this == TransactionType.investment;
+
   static TransactionType fromString(String value) {
     return TransactionType.values.firstWhere(
       (e) => e.name == value,

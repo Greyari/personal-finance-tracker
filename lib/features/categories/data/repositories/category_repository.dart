@@ -21,8 +21,7 @@ class CategoryRepository {
   /// Called once, right after a new user registers (see
   /// AuthController.register). Writes all default categories in a
   /// single batch. Guarded by an existence check so it's safe to call
-  /// more than once — e.g. if registration is retried — without ever
-  /// creating duplicates.
+  /// more than once without creating duplicates.
   Future<void> seedDefaultCategoriesIfNeeded(String userId) async {
     final existing = await _collection(userId).limit(1).get();
     if (existing.docs.isNotEmpty) return;
@@ -43,15 +42,23 @@ class CategoryRepository {
   }
 
   /// Streams categories for one user, optionally filtered by type.
-  /// Pass null to get every category regardless of type (used by the
-  /// transaction list to resolve category names/icons for display).
+  /// Pass null to get every category regardless of type.
+  /// Note: Categories with type `saving` are filtered out because Tabungan
+  /// is managed directly as Goals / Target Tabungan.
+  /// Sorting is performed in-memory to prevent missing Firestore composite index errors.
   Stream<List<CategoryModel>> watchCategories(String userId, {TransactionType? type}) {
-    Query<Map<String, dynamic>> query = _collection(userId).orderBy('name');
+    Query<Map<String, dynamic>> query = _collection(userId);
     if (type != null) {
       query = query.where('type', isEqualTo: type.name);
     }
-    return query.snapshots().map(
-        (snapshot) => snapshot.docs.map(CategoryModel.fromDoc).toList());
+    return query.snapshots().map((snapshot) {
+      final list = snapshot.docs
+          .map(CategoryModel.fromDoc)
+          .where((c) => c.type != TransactionType.saving)
+          .toList();
+      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return list;
+    });
   }
 
   Future<void> addCategory({
@@ -78,10 +85,7 @@ class CategoryRepository {
     await _collection(userId).doc(categoryId).delete();
   }
 
-  /// Looks up a category's ID by exact name. Used once, right after
-  /// seeding, so AuthController can link the default "Gereja" recurring
-  /// transaction (Section 13) to the "Gereja" category that was just
-  /// created — without hardcoding a category ID anywhere.
+  /// Looks up a category's ID by exact name.
   Future<String?> getCategoryIdByName(String userId, String name) async {
     final snapshot = await _collection(userId).where('name', isEqualTo: name).limit(1).get();
     if (snapshot.docs.isEmpty) return null;

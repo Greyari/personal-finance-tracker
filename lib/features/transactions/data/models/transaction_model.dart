@@ -4,8 +4,6 @@ import 'package:equatable/equatable.dart';
 import '../../../../shared/models/transaction_type.dart';
 
 /// Represents a document at users/{userId}/transactions/{transactionId}.
-/// Field set matches the spec exactly: id, userId, type, categoryId,
-/// amount, description, date, createdAt, updatedAt.
 class TransactionModel extends Equatable {
   final String id;
   final String userId;
@@ -14,6 +12,9 @@ class TransactionModel extends Equatable {
   final double amount;
   final String description;
   final DateTime date;
+  final String? recurringId;
+  final String? generatedPeriod;
+  final String? goalId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -25,9 +26,15 @@ class TransactionModel extends Equatable {
     required this.amount,
     required this.description,
     required this.date,
+    this.recurringId,
+    this.generatedPeriod,
+    this.goalId,
     this.createdAt,
     this.updatedAt,
   });
+
+  bool get isIncome => type == TransactionType.income;
+  bool get isExpense => type == TransactionType.expense;
 
   factory TransactionModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
@@ -39,6 +46,9 @@ class TransactionModel extends Equatable {
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
       description: data['description'] as String? ?? '',
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      recurringId: data['recurringId'] as String?,
+      generatedPeriod: data['generatedPeriod'] as String?,
+      goalId: data['goalId'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -52,6 +62,9 @@ class TransactionModel extends Equatable {
       'amount': amount,
       'description': description,
       'date': Timestamp.fromDate(date),
+      if (recurringId != null) 'recurringId': recurringId,
+      if (generatedPeriod != null) 'generatedPeriod': generatedPeriod,
+      if (goalId != null) 'goalId': goalId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -64,11 +77,24 @@ class TransactionModel extends Equatable {
       'amount': amount,
       'description': description,
       'date': Timestamp.fromDate(date),
+      if (goalId != null) 'goalId': goalId,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
 
   @override
-  List<Object?> get props =>
-      [id, userId, type, categoryId, amount, description, date, createdAt, updatedAt];
+  List<Object?> get props => [
+        id,
+        userId,
+        type,
+        categoryId,
+        amount,
+        description,
+        date,
+        recurringId,
+        generatedPeriod,
+        goalId,
+        createdAt,
+        updatedAt,
+      ];
 }

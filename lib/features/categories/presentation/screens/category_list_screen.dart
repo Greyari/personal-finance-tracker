@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/category_icons.dart';
 import '../../../../core/utils/error_mapper.dart';
 import '../../../../shared/models/transaction_type.dart';
+import '../../../../shared/widgets/glass_widgets.dart';
 import '../../data/models/category_model.dart';
 import '../providers/category_providers.dart';
 import 'add_edit_category_screen.dart';
@@ -19,12 +21,19 @@ class CategoryListScreen extends ConsumerStatefulWidget {
 class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  static const _types = TransactionType.values;
+  static const _types = [
+    TransactionType.expense,
+    TransactionType.income,
+    TransactionType.investment,
+  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _types.length, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -34,32 +43,24 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
   }
 
   Future<void> _confirmDelete(BuildContext context, CategoryModel category) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlassConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Kategori'),
-        content: Text(
-          'Hapus kategori "${category.name}"? Transaksi lama yang memakai kategori ini tidak akan ikut terhapus.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      title: 'Hapus Kategori',
+      message: 'Hapus kategori "${category.name}"? Transaksi lama yang memakai kategori ini tidak akan ikut terhapus.',
+      confirmLabel: 'Hapus',
+      isDestructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       final success =
           await ref.read(categoryControllerProvider.notifier).deleteCategory(category.id);
-      if (!success && context.mounted) {
+      if (success && context.mounted) {
+        showGlassSnackBar(context, 'Kategori "${category.name}" telah dihapus');
+      } else if (!success && context.mounted) {
         final error = ref.read(categoryControllerProvider).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ErrorMapper.toUserMessage(error))),
+        showGlassSnackBar(
+          context,
+          ErrorMapper.toUserMessage(error),
+          isError: true,
         );
       }
     }
@@ -67,13 +68,55 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final isDark = AppColors.isDark(context);
+    final primaryColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+
+    return GlassScaffold(
       appBar: AppBar(
-        title: const Text('Kategori'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _types.map((t) => Tab(text: t.label)).toList(),
+        title: Text(
+          'Kelola Kategori',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+            letterSpacing: -0.3,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0x331E293B) : const Color(0x24FFFFFF),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+              ),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              dividerColor: Colors.transparent,
+              tabs: _types.map((t) => Tab(text: t.label)).toList(),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -83,37 +126,87 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
           return categoriesAsync.when(
             data: (categories) {
               if (categories.isEmpty) {
-                return const Center(child: Text('Belum ada kategori.'));
+                return Center(
+                  child: Text(
+                    'Belum ada kategori untuk ${type.label}.',
+                    style: TextStyle(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                );
               }
               return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 88),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
                   final category = categories[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.background,
-                      child: Icon(CategoryIcons.resolve(category.icon)),
-                    ),
-                    title: Text(category.name),
-                    subtitle: category.isDefault ? const Text('Bawaan') : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => AddEditCategoryScreen(category: category)),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: GlassContainer(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      borderRadius: 18,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
+                            ),
+                            child: Icon(
+                              CategoryIcons.resolve(category.icon),
+                              color: primaryColor,
+                              size: 20,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _confirmDelete(context, category),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  category.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14.5,
+                                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                  ),
+                                ),
+                                if (category.isDefault)
+                                  Text(
+                                    'Kategori Bawaan',
+                                    style: TextStyle(
+                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 19),
+                            tooltip: 'Edit Kategori',
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => AddEditCategoryScreen(category: category),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline_rounded,
+                                size: 19, color: AppColors.expense(context)),
+                            tooltip: 'Hapus Kategori',
+                            onPressed: () => _confirmDelete(context, category),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
+                  ).animate().fadeIn(
+                        delay: Duration(milliseconds: 25 * index.clamp(0, 10)),
+                        duration: 200.ms,
+                      );
                 },
               );
             },
@@ -122,14 +215,16 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
           );
         }).toList(),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GlassCircularFab(
+        heroTag: 'fab_add_category',
+        bottomMargin: 12,
+        tooltip: 'Kategori Baru',
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) =>
                 AddEditCategoryScreen(initialType: _types[_tabController.index]),
           ),
         ),
-        child: const Icon(Icons.add),
       ),
     );
   }

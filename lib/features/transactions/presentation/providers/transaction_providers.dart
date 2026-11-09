@@ -33,16 +33,16 @@ class TransactionController extends StateNotifier<AsyncValue<void>> {
   TransactionController(this._repository, this._userId)
       : super(const AsyncValue.data(null));
 
-  Future<bool> addTransaction(TransactionModel transaction) async {
-    if (_userId == null) return false;
+  Future<String?> addTransaction(TransactionModel transaction) async {
+    if (_userId == null) return null;
     state = const AsyncValue.loading();
     try {
-      await _repository.addTransaction(transaction);
+      final docId = await _repository.addTransaction(transaction);
       state = const AsyncValue.data(null);
-      return true;
+      return docId;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return false;
+      return null;
     }
   }
 

@@ -7,19 +7,14 @@ import '../../../goals/presentation/screens/goals_shell_screen.dart';
 import '../../../recurring/presentation/providers/recurring_providers.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../transactions/presentation/screens/transaction_list_screen.dart';
+import '../../../../shared/widgets/glass_widgets.dart';
 
-/// Bottom navigation shell per the UI spec: Home, Transactions, Budget,
-/// Goals, Settings. All five tabs are now real (Phase 6) — Goals hosts
-/// both Saving Goals and Investments as sub-tabs (see GoalsShellScreen).
-class MainShell extends ConsumerStatefulWidget {
+/// State provider for bottom navigation index, allowing other screens
+/// (like Dashboard quick actions) to programmatically switch tabs.
+final mainNavIndexProvider = StateProvider<int>((ref) => 0);
+
+class MainShell extends ConsumerWidget {
   const MainShell({super.key});
-
-  @override
-  ConsumerState<MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends ConsumerState<MainShell> {
-  int _index = 0;
 
   static const _screens = [
     DashboardScreen(),
@@ -30,43 +25,43 @@ class _MainShellState extends ConsumerState<MainShell> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Silently checks once per app session whether this month's active
-    // recurring transactions (e.g. Internet, Gereja 10%) have already
-    // been generated, and creates any that are missing. See
-    // recurringGenerationProvider for why this is a client-side check
-    // rather than a scheduled Cloud Function.
+    // recurring transactions have already been generated.
     ref.watch(recurringGenerationProvider);
+    final index = ref.watch(mainNavIndexProvider);
 
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (index) => setState(() => _index = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+    return GlassScaffold(
+      extendBody: true,
+      body: IndexedStack(index: index, children: _screens),
+      bottomNavigationBar: GlassBottomNav(
+        selectedIndex: index,
+        onItemSelected: (newIndex) =>
+            ref.read(mainNavIndexProvider.notifier).state = newIndex,
+        items: const [
+          GlassNavItem(
+            selectedIcon: Icons.home_rounded,
+            unselectedIcon: Icons.home_outlined,
             label: 'Home',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz),
+          GlassNavItem(
+            selectedIcon: Icons.swap_horiz_rounded,
+            unselectedIcon: Icons.swap_horiz_outlined,
             label: 'Transaksi',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.pie_chart_outline),
-            selectedIcon: Icon(Icons.pie_chart),
+          GlassNavItem(
+            selectedIcon: Icons.pie_chart_rounded,
+            unselectedIcon: Icons.pie_chart_outline_rounded,
             label: 'Budget',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.flag_outlined),
-            selectedIcon: Icon(Icons.flag),
+          GlassNavItem(
+            selectedIcon: Icons.flag_rounded,
+            unselectedIcon: Icons.flag_outlined,
             label: 'Goals',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+          GlassNavItem(
+            selectedIcon: Icons.settings_rounded,
+            unselectedIcon: Icons.settings_outlined,
             label: 'Settings',
           ),
         ],

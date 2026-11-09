@@ -10,8 +10,9 @@ class DefaultCategory {
 
 /// Seeded once into a new user's `categories` subcollection right after
 /// registration (see CategoryRepository.seedDefaultCategoriesIfNeeded).
-/// The user can rename, add to, or delete any of these afterward —
-/// this list is only ever a starting point, never re-applied.
+/// The user can rename, add to, or delete any of these afterward.
+/// Note: Tabungan (Savings) is excluded from categories as it is directly
+/// managed via Goals / Target Tabungan.
 const List<DefaultCategory> defaultCategories = [
   // Income
   DefaultCategory('Gaji', TransactionType.income, 'salary'),
@@ -36,11 +37,6 @@ const List<DefaultCategory> defaultCategories = [
   DefaultCategory('Cicilan', TransactionType.expense, 'installment'),
   DefaultCategory('Gereja', TransactionType.expense, 'church'),
   DefaultCategory('Lainnya', TransactionType.expense, 'other'),
-
-  // Saving
-  DefaultCategory('Tabungan utama', TransactionType.saving, 'saving_main'),
-  DefaultCategory('Dana darurat', TransactionType.saving, 'emergency_fund'),
-  DefaultCategory('Target tertentu', TransactionType.saving, 'saving_goal'),
 
   // Investment
   DefaultCategory('Reksa Dana', TransactionType.investment, 'mutual_fund'),

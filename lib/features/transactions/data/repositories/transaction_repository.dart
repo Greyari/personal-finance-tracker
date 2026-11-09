@@ -26,9 +26,13 @@ class TransactionRepository {
     }
   }
 
-  Future<void> addTransaction(TransactionModel transaction) async {
+  Future<String> addTransaction(TransactionModel transaction) async {
     _assertValidAmount(transaction.amount);
-    await _collection(transaction.userId).add(transaction.toMapForCreate());
+    final docRef = transaction.id.isNotEmpty
+        ? _collection(transaction.userId).doc(transaction.id)
+        : _collection(transaction.userId).doc();
+    await docRef.set(transaction.toMapForCreate());
+    return docRef.id;
   }
 
   Future<void> updateTransaction(TransactionModel transaction) async {
@@ -48,7 +52,7 @@ class TransactionRepository {
   /// Streams every transaction whose `date` falls within the given
   /// calendar month, newest first. This is the query the transaction
   /// list uses today, and the same query the dashboard, budget progress,
-  /// and monthly report will reuse in later phases.
+  /// and monthly report features will reuse.
   Stream<List<TransactionModel>> watchTransactionsForMonth(
     String userId, {
     required int year,
@@ -56,6 +60,7 @@ class TransactionRepository {
   }) {
     final start = DateTime(year, month, 1);
     final end = DateTime(year, month + 1, 1);
+
     return _collection(userId)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
         .where('date', isLessThan: Timestamp.fromDate(end))

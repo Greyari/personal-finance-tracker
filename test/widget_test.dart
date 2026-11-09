@@ -1,30 +1,49 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:personal_finance_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personal_finance_app/main.dart';
 
+class FakeAuthController extends StateNotifier<AsyncValue<void>>
+    implements AuthController {
+  FakeAuthController() : super(const AsyncValue.data(null));
+
+  @override
+  Future<bool> signIn({required String email, required String password}) async =>
+      true;
+
+  @override
+  Future<bool> register({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async =>
+      true;
+
+  @override
+  Future<bool> sendPasswordResetEmail({required String email}) async => true;
+
+  @override
+  Future<void> signOut() async {}
+}
+
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Renders LoginScreen when user is not authenticated',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith((ref) => Stream.value(null)),
+          authControllerProvider.overrideWith((ref) => FakeAuthController()),
+        ],
+        child: const MaterialApp(
+          home: AuthGate(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Selamat Datang'), findsOneWidget);
+    expect(find.text('Masuk untuk mengelola keuangan Anda'), findsOneWidget);
   });
 }

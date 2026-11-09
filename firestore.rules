@@ -122,18 +122,18 @@ service cloud.firestore {
           && request.resource.data.currentAmount is number;
         allow delete: if isOwner();
 
-        // Contribution history: additions only, amount must be positive.
-        // currentAmount on the parent goal is updated in the same
-        // Firestore transaction as this write (see
-        // SavingGoalRepository.addContribution) — this rule can't
-        // independently re-verify that sum, so the client-side atomic
-        // transaction is what keeps the two in sync.
+        // Contribution history: synced 1-to-1 with transactions (docId = transactionId).
+        // Amount must be positive. Linked contribution docs are updated or
+        // deleted when the corresponding saving transaction is edited or deleted.
         match /contributions/{contributionId} {
           allow read: if isOwner();
           allow create: if isOwner()
             && request.resource.data.amount is number
             && request.resource.data.amount > 0;
-          allow update, delete: if false; // append-only history
+          allow update: if isOwner()
+            && request.resource.data.amount is number
+            && request.resource.data.amount > 0;
+          allow delete: if isOwner();
         }
       }
 

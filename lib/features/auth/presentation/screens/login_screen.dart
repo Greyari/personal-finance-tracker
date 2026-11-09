@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/glass_widgets.dart';
 import '../providers/auth_providers.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
@@ -37,92 +39,178 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
     if (!success && mounted) {
       final error = ref.read(authControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error?.toString() ?? 'Login gagal.')),
+      showGlassSnackBar(
+        context,
+        error?.toString() ?? 'Login gagal. Periksa kembali email dan password Anda.',
+        isError: true,
       );
     }
-    // On success there's nothing to do here: AuthGate in main.dart is
-    // watching authStateProvider and will swap to the home screen itself.
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
+    final isDark = AppColors.isDark(context);
 
-    return Scaffold(
+    return GlassScaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 40),
+                  // App Icon / Logo with glowing glass badge
+                  Center(
+                    child: Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                            isDark ? AppColors.incomeDark : AppColors.incomeLight,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isDark ? AppColors.primaryDark : AppColors.primaryLight)
+                                .withValues(alpha: 0.35),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .scale(duration: 500.ms, curve: Curves.easeOutBack)
+                      .fadeIn(duration: 400.ms),
+
+                  const SizedBox(height: 20),
+
                   Text(
                     'Selamat Datang',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontSize: 28,
+                          letterSpacing: -0.6,
+                        ),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.2, end: 0),
+
+                  const SizedBox(height: 6),
+                  Text(
                     'Masuk untuk mengelola keuangan Anda',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
+                    style: TextStyle(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      fontSize: 14.5,
+                    ),
+                  ).animate().fadeIn(delay: 250.ms),
+
                   const SizedBox(height: 32),
-                  AppTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    keyboardType: TextInputType.emailAddress,
-                    validator: Validators.email,
-                  ),
-                  const SizedBox(height: 16),
-                  AppTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    obscureText: _obscurePassword,
-                    validator: Validators.password,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+
+                  // Glass Form Card
+                  GlassCard(
+                    padding: const EdgeInsets.all(22),
+                    borderRadius: 26,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hint: 'nama@email.com',
+                          keyboardType: TextInputType.emailAddress,
+                          validator: Validators.email,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hint: 'Minimal 6 karakter',
+                          obscureText: _obscurePassword,
+                          validator: Validators.password,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            ),
+                            child: Text(
+                              'Lupa password?',
+                              style: TextStyle(
+                                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        AppButton(
+                          label: 'Masuk',
+                          icon: Icons.login_rounded,
+                          isLoading: isLoading,
+                          onPressed: _handleLogin,
+                        ),
+                      ],
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen()),
-                      ),
-                      child: const Text('Lupa password?'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  AppButton(
-                    label: 'Masuk',
-                    isLoading: isLoading,
-                    onPressed: _handleLogin,
-                  ),
-                  const SizedBox(height: 16),
+                  ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
+
+                  const SizedBox(height: 24),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Belum punya akun?'),
+                      Text(
+                        'Belum punya akun? ',
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const RegisterScreen()),
+                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
                         ),
-                        child: const Text('Daftar'),
+                        child: Text(
+                          'Daftar Sekarang',
+                          style: TextStyle(
+                            color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
-                  ),
+                  ).animate().fadeIn(delay: 450.ms),
                 ],
               ),
             ),
