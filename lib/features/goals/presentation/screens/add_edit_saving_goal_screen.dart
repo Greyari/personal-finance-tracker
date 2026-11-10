@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/cover_image_picker.dart';
 import '../../../../core/utils/currency_input_formatter.dart';
 import '../../../../core/utils/error_mapper.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/glass_widgets.dart';
+import '../../../../shared/widgets/goal_cover_image.dart';
 import '../../data/models/saving_goal_model.dart';
 import '../providers/saving_goal_providers.dart';
 
@@ -26,6 +30,7 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _targetController = TextEditingController();
+  String? _coverPath;
 
   @override
   void initState() {
@@ -33,6 +38,7 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
     if (widget.goal != null) {
       _nameController.text = widget.goal!.name;
       _targetController.text = CurrencyFormatter.formatForInput(widget.goal!.targetAmount);
+      _coverPath = widget.goal!.coverImagePath;
     }
   }
 
@@ -41,6 +47,71 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
     _nameController.dispose();
     _targetController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCover(ImageSource source) async {
+    try {
+      final path = await CoverImagePicker.pick(source);
+      if (path != null && mounted) setState(() => _coverPath = path);
+    } catch (e) {
+      if (mounted) {
+        showGlassSnackBar(context, 'Gagal mengambil foto. Coba lagi.', isError: true);
+      }
+    }
+  }
+
+  void _showCoverOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CoverOption(
+                icon: Icons.photo_library_outlined,
+                label: 'Pilih dari Galeri',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickCover(ImageSource.gallery);
+                },
+              ),
+              _CoverOption(
+                icon: Icons.photo_camera_outlined,
+                label: 'Ambil dengan Kamera',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickCover(ImageSource.camera);
+                },
+              ),
+              _CoverOption(
+                icon: Icons.auto_awesome_outlined,
+                label: 'Pakai gambar contoh',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _coverPath = 'assets/images/goals/dream_car.png');
+                },
+              ),
+              if (_coverPath != null)
+                _CoverOption(
+                  icon: Icons.delete_outline_rounded,
+                  label: 'Hapus foto',
+                  color: AppColors.expenseDark,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _coverPath = null);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -55,8 +126,13 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
             name: _nameController.text.trim(),
             targetAmount: targetAmount,
             currentAmount: widget.goal!.currentAmount,
+            coverImagePath: _coverPath,
           ))
-        : await controller.addGoal(name: _nameController.text.trim(), targetAmount: targetAmount);
+        : await controller.addGoal(
+            name: _nameController.text.trim(),
+            targetAmount: targetAmount,
+            coverImagePath: _coverPath,
+          );
 
     if (success && mounted) {
       showGlassSnackBar(
@@ -98,8 +174,54 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                GlassCard(
-                  padding: const EdgeInsets.all(20),
+                GestureDetector(
+                  onTap: _showCoverOptions,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    child: SizedBox(
+                      height: 180,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          GoalCoverImage(path: _coverPath),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  AppColors.backgroundDark.withValues(alpha: 0.85),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: AppSpacing.sm,
+                            bottom: AppSpacing.sm,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_photo_alternate_outlined,
+                                    color: AppColors.primaryDark, size: 20),
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  _coverPath == null ? 'Tambah foto cover' : 'Ganti foto cover',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimaryDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(duration: 300.ms),
+                const SizedBox(height: AppSpacing.sm),
+                GlassCard(                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -133,6 +255,33 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class _CoverOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _CoverOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+    final c = color ?? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
+    final iconColor = color ?? (isDark ? AppColors.primaryDark : AppColors.primaryLight);
+    return ListTile(
+      leading: Icon(icon, color: iconColor),
+      title: Text(label, style: GoogleFonts.inter(fontSize: 15, color: c)),
+      onTap: onTap,
     );
   }
 }

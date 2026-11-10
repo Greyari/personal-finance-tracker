@@ -1,6 +1,8 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -8,9 +10,14 @@ import '../../../../core/utils/category_icons.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/models/transaction_type.dart';
 import '../../../../shared/widgets/glass_widgets.dart';
+import '../../../../shared/widgets/goal_card_slider.dart';
 import '../../../../shared/widgets/month_selector.dart';
+import '../../../../shared/widgets/note_sticky_widget.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
+import '../../../goals/presentation/providers/saving_goal_providers.dart';
+import '../../../goals/presentation/screens/add_edit_saving_goal_screen.dart';
+import '../../../goals/presentation/screens/saving_goal_detail_screen.dart';
 import '../../../main/presentation/screens/main_shell.dart';
 import '../../../reports/presentation/screens/monthly_report_screen.dart';
 import '../../../transactions/data/models/transaction_model.dart';
@@ -36,6 +43,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final profileAsync = ref.watch(userProfileProvider);
     final transactionsAsync = ref.watch(transactionsForMonthProvider);
     final categoriesAsync = ref.watch(categoriesProvider(null));
+    final goalsAsync = ref.watch(savingGoalsProvider);
     final summary = ref.watch(monthlySummaryProvider);
     final budgetUsedPercent = ref.watch(budgetUsedPercentProvider);
     final dailyLimit = ref.watch(dailySpendingLimitProvider);
@@ -44,6 +52,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton: const FloatingNoteButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
         title: Row(
           children: [
@@ -92,12 +102,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           GlassSliverRefreshControl(
             onRefresh: () async {
               ref.invalidate(transactionsForMonthProvider);
-              ref.invalidate(monthlySummaryProvider);
               ref.invalidate(categoriesProvider(null));
-              ref.invalidate(budgetUsedPercentProvider);
-              ref.invalidate(financialHealthProvider);
+              ref.invalidate(savingGoalsProvider);
               ref.invalidate(userProfileProvider);
-              await Future.delayed(const Duration(milliseconds: 600));
+              await Future<void>.delayed(const Duration(milliseconds: 600));
             },
           ),
 
@@ -108,6 +116,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               delegate: SliverChildListDelegate([
                 // User Greeting Header
                 profileAsync.when(
+                  skipLoadingOnRefresh: true,
                   data: (profile) => Row(
                     children: [
                       Container(
@@ -136,8 +145,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             (profile != null && profile.displayName.isNotEmpty)
                                 ? profile.displayName[0].toUpperCase()
                                 : 'U',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF0F172A) : Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
@@ -223,10 +232,103 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     .animate()
                     .fadeIn(duration: 500.ms)
                     .slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 12),
+
+                // Saving Goals Slider (Sesuai Referensi 3)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.flag_rounded,
+                            size: 18,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Target Tabungan',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () => ref.read(mainNavIndexProvider.notifier).state = 2,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Lihat Semua',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 11,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                goalsAsync.when(
+                  skipLoadingOnRefresh: true,
+                  data: (goals) => GoalCardSlider(
+                    goals: goals,
+                    onGoalTap: (goal) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SavingGoalDetailScreen(goal: goal),
+                        ),
+                      );
+                    },
+                    onAddGoalTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AddEditSavingGoalScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  loading: () => Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                    ),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
+                ).animate().fadeIn(duration: 520.ms).slideY(begin: 0.08, end: 0),
+                const SizedBox(height: 20),
+
+                // Grafik Tren Arus Kas Interaktif (fl_chart)
+                _FinancialTrendsChart(
+                  transactions: transactionsAsync.value ?? const [],
+                ).animate().fadeIn(duration: 530.ms).slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 20),
 
                 // Recent Transactions Section
                 transactionsAsync.when(
+                  skipLoadingOnRefresh: true,
                   data: (transactions) => _RecentTransactionsSection(
                     transactions: transactions.take(5).toList(),
                     categories: categoriesAsync.value ?? const [],
@@ -291,8 +393,8 @@ class _FuturisticBalanceCard extends StatelessWidget {
         gradient: LinearGradient(
           colors: isDark
               ? [
-                  const Color(0xFF1E293B),
-                  const Color(0xFF0F172A),
+                  AppColors.surfaceHigh,
+                  AppColors.surfaceDark,
                 ]
               : [
                   Colors.white.withValues(alpha: 0.95),
@@ -641,6 +743,9 @@ class _QuickPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
+    final contentColor = color.computeLuminance() > 0.5
+        ? const Color(0xFF0F172A)
+        : Colors.white;
 
     return Container(
       decoration: BoxDecoration(
@@ -678,12 +783,12 @@ class _QuickPillButton extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: Colors.white, size: 20),
+                Icon(icon, color: contentColor, size: 20),
                 const SizedBox(height: 5),
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: contentColor,
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                   ),
@@ -719,7 +824,7 @@ class _CashFlowDistributionBar extends StatelessWidget {
     final expenseColor = AppColors.expense(context);
     final incomeColor = AppColors.income(context);
     final primaryColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
-    final savingColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+    final savingColor = isDark ? AppColors.savingDark : AppColors.savingLight;
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
@@ -788,11 +893,11 @@ class _CashFlowDistributionBar extends StatelessWidget {
             spacing: 14,
             runSpacing: 6,
             children: [
-              _legendItem('Belanja ${(expensePercent * 100).toStringAsFixed(0)}%', expenseColor),
-              _legendItem('Tabungan ${(savingPercent * 100).toStringAsFixed(0)}%', savingColor),
-              _legendItem('Investasi ${(investPercent * 100).toStringAsFixed(0)}%', primaryColor),
+              _legendItem(context, 'Belanja ${(expensePercent * 100).toStringAsFixed(0)}%', expenseColor),
+              _legendItem(context, 'Tabungan ${(savingPercent * 100).toStringAsFixed(0)}%', savingColor),
+              _legendItem(context, 'Investasi ${(investPercent * 100).toStringAsFixed(0)}%', primaryColor),
               if (summary.sisa > 0 && total > 0)
-                _legendItem('Tersisa ${((summary.sisa / total) * 100).toStringAsFixed(0)}%', incomeColor),
+                _legendItem(context, 'Tersisa ${((summary.sisa / total) * 100).toStringAsFixed(0)}%', incomeColor),
             ],
           ),
         ],
@@ -800,7 +905,7 @@ class _CashFlowDistributionBar extends StatelessWidget {
     );
   }
 
-  Widget _legendItem(String text, Color color) {
+  Widget _legendItem(BuildContext context, String text, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -812,7 +917,11 @@ class _CashFlowDistributionBar extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           text,
-          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ],
     );
@@ -831,12 +940,13 @@ class _SummaryGrid extends StatelessWidget {
     final expenseColor = AppColors.expense(context);
     final isDark = AppColors.isDark(context);
     final primaryColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
-    final savingColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+    final savingColor = isDark ? AppColors.savingDark : AppColors.savingLight;
 
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       childAspectRatio: 1.7,
@@ -896,6 +1006,7 @@ class _StatCard extends StatelessWidget {
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       borderRadius: 20,
+      borderColor: color.withValues(alpha: isDark ? 0.22 : 0.16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1050,7 +1161,7 @@ class _RecentTransactionsSection extends StatelessWidget {
                     sign = '-';
                     break;
                   case TransactionType.saving:
-                    amountColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+                    amountColor = isDark ? AppColors.savingDark : AppColors.savingLight;
                     sign = '-';
                     break;
                   case TransactionType.investment:
@@ -1275,3 +1386,183 @@ class _MiniHealthRow extends StatelessWidget {
     );
   }
 }
+
+class _FinancialTrendsChart extends StatelessWidget {
+  final List<TransactionModel> transactions;
+
+  const _FinancialTrendsChart({required this.transactions});
+
+  @override
+  Widget build(BuildContext context) {
+    final incomeColor = AppColors.income(context);
+    final expenseColor = AppColors.expense(context);
+
+    // Compute weekly data (Week 1 to Week 4)
+    final weeks = List.generate(4, (_) => {'income': 0.0, 'expense': 0.0});
+    for (final tx in transactions) {
+      final day = tx.date.day;
+      final weekIndex = ((day - 1) ~/ 7).clamp(0, 3);
+      if (tx.type == TransactionType.income) {
+        weeks[weekIndex]['income'] = (weeks[weekIndex]['income'] ?? 0) + tx.amount;
+      } else if (tx.type == TransactionType.expense) {
+        weeks[weekIndex]['expense'] = (weeks[weekIndex]['expense'] ?? 0) + tx.amount;
+      }
+    }
+
+    final maxVal = weeks.fold<double>(
+      100000.0,
+      (max, w) => [max, w['income'] ?? 0, w['expense'] ?? 0].reduce((a, b) => a > b ? a : b),
+    );
+
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tren Arus Kas',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Perbandingan mingguan bulan ini',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  _LegendDot(color: incomeColor, label: 'Masuk'),
+                  const SizedBox(width: 12),
+                  _LegendDot(color: expenseColor, label: 'Keluar'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 160,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxVal * 1.15,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => AppColors.surfaceHigh,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final isIncome = rodIndex == 0;
+                      return BarTooltipItem(
+                        '${isIncome ? "Masuk" : "Keluar"}\n${CurrencyFormatter.format(rod.toY)}',
+                        TextStyle(
+                          color: isIncome ? incomeColor : expenseColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx >= 0 && idx < 4) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Mg ${idx + 1}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(4, (i) {
+                  final inVal = weeks[i]['income'] ?? 0;
+                  final outVal = weeks[i]['expense'] ?? 0;
+                  return BarChartGroupData(
+                    x: i,
+                    barsSpace: 6,
+                    barRods: [
+                      BarChartRodData(
+                        toY: inVal,
+                        color: incomeColor,
+                        width: 14,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                      ),
+                      BarChartRodData(
+                        toY: outVal,
+                        color: expenseColor,
+                        width: 14,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

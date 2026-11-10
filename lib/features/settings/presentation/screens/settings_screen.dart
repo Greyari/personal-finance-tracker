@@ -78,8 +78,8 @@ class SettingsScreen extends ConsumerWidget {
                         (profile != null && profile.displayName.isNotEmpty)
                             ? profile.displayName[0].toUpperCase()
                             : 'U',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFF0F172A) : Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),

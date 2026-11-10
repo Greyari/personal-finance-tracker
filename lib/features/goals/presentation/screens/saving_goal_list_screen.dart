@@ -32,6 +32,7 @@ class SavingGoalListScreen extends ConsumerWidget {
             },
           ),
           ...goalsAsync.when(
+            skipLoadingOnRefresh: true,
             data: (goals) {
               if (goals.isEmpty) {
                 return [

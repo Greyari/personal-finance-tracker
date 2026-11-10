@@ -43,11 +43,11 @@ class BudgetListScreen extends ConsumerWidget {
           GlassSliverRefreshControl(
             onRefresh: () async {
               ref.invalidate(budgetsProvider);
-              ref.invalidate(monthlyIncomeProvider);
-              await Future.delayed(const Duration(milliseconds: 600));
+              await Future<void>.delayed(const Duration(milliseconds: 600));
             },
           ),
           budgetsAsync.when(
+            skipLoadingOnRefresh: true,
             data: (_) => SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
               sliver: SliverList(

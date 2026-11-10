@@ -28,12 +28,22 @@ class SavingGoalController extends StateNotifier<AsyncValue<void>> {
 
   SavingGoalController(this._repository, this._userId) : super(const AsyncValue.data(null));
 
-  Future<bool> addGoal({required String name, required double targetAmount}) async {
+  Future<bool> addGoal({
+    required String name,
+    required double targetAmount,
+    String? coverImagePath,
+  }) async {
     if (_userId == null) return false;
     state = const AsyncValue.loading();
     try {
       await _repository.addGoal(
-        SavingGoalModel(id: '', userId: _userId, name: name, targetAmount: targetAmount),
+        SavingGoalModel(
+          id: '',
+          userId: _userId,
+          name: name,
+          targetAmount: targetAmount,
+          coverImagePath: coverImagePath,
+        ),
       );
       state = const AsyncValue.data(null);
       return true;

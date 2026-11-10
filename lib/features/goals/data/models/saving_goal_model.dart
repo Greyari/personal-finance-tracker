@@ -13,6 +13,8 @@ class SavingGoalModel extends Equatable {
   final String name;
   final double targetAmount;
   final double currentAmount;
+  /// Local file path (app documents dir) of the user-picked cover photo.
+  final String? coverImagePath;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -22,6 +24,7 @@ class SavingGoalModel extends Equatable {
     required this.name,
     required this.targetAmount,
     this.currentAmount = 0,
+    this.coverImagePath,
     this.createdAt,
     this.updatedAt,
   });
@@ -37,6 +40,7 @@ class SavingGoalModel extends Equatable {
       name: data['name'] as String? ?? '',
       targetAmount: (data['targetAmount'] as num?)?.toDouble() ?? 0,
       currentAmount: (data['currentAmount'] as num?)?.toDouble() ?? 0,
+      coverImagePath: data['coverImagePath'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -48,6 +52,7 @@ class SavingGoalModel extends Equatable {
       'name': name,
       'targetAmount': targetAmount,
       'currentAmount': 0,
+      'coverImagePath': coverImagePath,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -57,11 +62,12 @@ class SavingGoalModel extends Equatable {
     return {
       'name': name,
       'targetAmount': targetAmount,
+      'coverImagePath': coverImagePath,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
 
   @override
   List<Object?> get props =>
-      [id, userId, name, targetAmount, currentAmount, createdAt, updatedAt];
+      [id, userId, name, targetAmount, currentAmount, coverImagePath, createdAt, updatedAt];
 }

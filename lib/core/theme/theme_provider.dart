@@ -14,11 +14,11 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
   ThemeNotifier(this._prefs) : super(_loadInitialTheme(_prefs));
 
   static ThemeMode _loadInitialTheme(SharedPreferences? prefs) {
-    if (prefs == null) return ThemeMode.system;
+    if (prefs == null) return ThemeMode.dark;
     final saved = prefs.getString(_kThemePreferenceKey);
     if (saved == 'light') return ThemeMode.light;
-    if (saved == 'dark') return ThemeMode.dark;
-    return ThemeMode.system;
+    if (saved == 'system') return ThemeMode.system;
+    return ThemeMode.dark;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

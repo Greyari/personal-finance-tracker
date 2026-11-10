@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import '../../../../core/utils/validators.dart';
 import '../../../../shared/models/transaction_type.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/glass_widgets.dart';
+import '../../../../shared/widgets/numeric_keypad.dart';
 import '../../../../shared/widgets/searchable_category_field.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
@@ -45,6 +47,7 @@ class _AddEditTransactionScreenState
   DateTime _date = DateTime.now();
   String? _categoryId;
   String? _selectedGoalId;
+  String _rawDigits = '';
 
   @override
   void initState() {
@@ -55,9 +58,47 @@ class _AddEditTransactionScreenState
     _selectedGoalId = tx?.goalId;
     _date = tx?.date ?? DateTime.now();
     if (tx != null) {
+      _rawDigits = tx.amount.toInt().toString();
       _amountController.text = CurrencyFormatter.formatForInput(tx.amount);
       _descriptionController.text = tx.description;
     }
+  }
+
+  void _onKeypadPressed(String key) {
+    setState(() {
+      if (key == '000') {
+        if (_rawDigits.isNotEmpty && _rawDigits != '0' && _rawDigits.length < 12) {
+          _rawDigits += '000';
+        }
+      } else {
+        if (_rawDigits == '0') {
+          _rawDigits = key;
+        } else if (_rawDigits.length < 12) {
+          _rawDigits += key;
+        }
+      }
+      _amountController.text = _rawDigits.isEmpty
+          ? ''
+          : CurrencyFormatter.formatForInput(num.tryParse(_rawDigits) ?? 0);
+    });
+  }
+
+  void _onKeypadDelete() {
+    setState(() {
+      if (_rawDigits.isNotEmpty) {
+        _rawDigits = _rawDigits.substring(0, _rawDigits.length - 1);
+        _amountController.text = _rawDigits.isEmpty
+            ? ''
+            : CurrencyFormatter.formatForInput(num.tryParse(_rawDigits) ?? 0);
+      }
+    });
+  }
+
+  void _onKeypadClear() {
+    setState(() {
+      _rawDigits = '';
+      _amountController.text = '';
+    });
   }
 
   @override
@@ -78,6 +119,12 @@ class _AddEditTransactionScreenState
   }
 
   Future<void> _save() async {
+    final amountCheck = Validators.amount(_amountController.text);
+    if (amountCheck != null) {
+      showGlassSnackBar(context, amountCheck, isError: true);
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_type != TransactionType.saving && _categoryId == null) {
@@ -314,21 +361,73 @@ class _AddEditTransactionScreenState
                   }),
                 ).animate().fadeIn(duration: 300.ms),
                 const SizedBox(height: 18),
+
+                // Large Nominal Display (Sesuai Referensi 2)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.surfaceHigh.withValues(alpha: 0.85)
+                        : Colors.white.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(
+                      color: isDark ? AppColors.cardBorder : const Color(0x180F172A),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.3)
+                            : const Color(0x0A0F172A),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Nominal (${_type.subtitle})',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _rawDigits.isEmpty
+                              ? 'Rp0'
+                              : CurrencyFormatter.format(num.tryParse(_rawDigits) ?? 0),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 42,
+                            fontWeight: FontWeight.w800,
+                            color: _type.isExpense
+                                ? AppColors.expense(context)
+                                : AppColors.income(context),
+                            letterSpacing: -1.0,
+                          ),
+                        ),
+                      ),
+                      // Hidden text field for form validation
+                      Offstage(
+                        offstage: true,
+                        child: TextFormField(
+                          controller: _amountController,
+                          validator: (_) => Validators.amount(_amountController.text),
+                        ),
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 320.ms).slideY(begin: 0.05, end: 0),
+                const SizedBox(height: 16),
+
                 GlassCard(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      AppTextField(
-                        controller: _amountController,
-                        label: 'Nominal (${_type.subtitle})',
-                        hint: 'Rp0',
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [CurrencyInputFormatter()],
-                        validator: (_) => Validators.amount(_amountController.text),
-                      ),
                       if (_type != TransactionType.saving) ...[
-                        const SizedBox(height: 16),
                         categoriesAsync.when(
                           data: (categories) => SearchableCategoryField(
                             label: 'Kategori',
@@ -340,7 +439,6 @@ class _AddEditTransactionScreenState
                           error: (e, _) => Text('Gagal memuat kategori: $e'),
                         ),
                       ] else ...[
-                        const SizedBox(height: 16),
                         _GoalSelectorSection(
                           goalsAsync: savingGoalsAsync,
                           selectedGoalId: _selectedGoalId,
@@ -377,7 +475,16 @@ class _AddEditTransactionScreenState
                     ],
                   ),
                 ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 20),
+
+                // In-App Numeric Keypad (Sesuai Referensi 2)
+                NumericKeypad(
+                  onKeyPressed: _onKeypadPressed,
+                  onDeletePressed: _onKeypadDelete,
+                  onLongDeletePressed: _onKeypadClear,
+                ).animate().fadeIn(duration: 380.ms),
                 const SizedBox(height: 24),
+
                 GlassButton(
                   label: 'Simpan Transaksi',
                   icon: Icons.check_rounded,
@@ -487,8 +594,12 @@ class _GoalSelectorSection extends StatelessWidget {
               return DropdownButtonFormField<String?>(
                 key: ValueKey('goal_select_${validSelectedId ?? 'none'}'),
                 initialValue: validSelectedId,
-                dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                dropdownColor: isDark ? AppColors.surfaceHigh : Colors.white,
                 borderRadius: BorderRadius.circular(18),
+                style: TextStyle(
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
                   labelText: isRequired ? 'Pilih Target Tabungan *' : 'Pilih Target Tabungan',
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -551,6 +662,9 @@ class _TypeSelector extends StatelessWidget {
             break;
         }
 
+        final inactiveTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+        final itemColor = isSelected ? activeColor : inactiveTextColor;
+
         return InkWell(
           onTap: () => onChanged(type),
           borderRadius: BorderRadius.circular(16),
@@ -573,11 +687,11 @@ class _TypeSelector extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (type.isIncome)
-                  Icon(Icons.arrow_downward_rounded, size: 15, color: isSelected ? activeColor : null),
+                  Icon(Icons.arrow_downward_rounded, size: 15, color: itemColor),
                 if (type.isExpense)
-                  Icon(Icons.arrow_upward_rounded, size: 15, color: isSelected ? activeColor : null),
+                  Icon(Icons.arrow_upward_rounded, size: 15, color: itemColor),
                 if (type.isSaving)
-                  Icon(Icons.flag_rounded, size: 15, color: isSelected ? activeColor : null),
+                  Icon(Icons.flag_rounded, size: 15, color: itemColor),
                 if (type.isIncome || type.isExpense || type.isSaving) const SizedBox(width: 5),
                 Text(
                   type.isIncome
@@ -586,7 +700,7 @@ class _TypeSelector extends StatelessWidget {
                           ? 'Uang Keluar'
                           : type.label,
                   style: TextStyle(
-                    color: isSelected ? activeColor : null,
+                    color: itemColor,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 13,
                   ),

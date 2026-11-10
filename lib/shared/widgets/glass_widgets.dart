@@ -4,8 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Background with smooth ambient glowing color blobs to provide
-/// the optical depth needed for Glassmorphism refraction.
+/// Background with rich ambient glowing color blobs and subtle
+/// topographic contour mesh that provides stunning optical depth
+/// and refraction for Glassmorphism.
 class GlassBackground extends StatelessWidget {
   final Widget child;
 
@@ -15,62 +16,116 @@ class GlassBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
 
-    final blob1 = isDark ? AppColors.blobPrimaryDark : AppColors.blobPrimaryLight;
-    final blob2 = isDark ? AppColors.blobSecondaryDark : AppColors.blobSecondaryLight;
-    final blob3 = isDark ? AppColors.blobAccentDark : AppColors.blobAccentLight;
-    final baseBg = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-
     return Stack(
       children: [
-        // Base solid background
+        // Base luxury gradient background
         Positioned.fill(
-          child: Container(color: baseBg),
-        ),
-
-        // Ambient Blob Top Left
-        Positioned(
-          top: -80,
-          left: -60,
-          width: 320,
-          height: 320,
           child: Container(
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [blob1, blob1.withValues(alpha: 0.0)],
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDark
+                    ? const [
+                        Color(0xFF080B11),
+                        Color(0xFF0E131F),
+                        Color(0xFF0A0D14),
+                      ]
+                    : const [
+                        Color(0xFFF8FAFC),
+                        Color(0xFFF1F5F9),
+                        Color(0xFFE9EEF5),
+                      ],
               ),
             ),
           ),
         ),
 
-        // Ambient Blob Top Right
+        // Radiant Orb 1: Top-Left Emerald Aura (Uang & Pertumbuhan)
         Positioned(
-          top: 120,
-          right: -70,
-          width: 340,
-          height: 340,
+          top: -90,
+          left: -70,
+          width: 380,
+          height: 380,
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [blob2, blob2.withValues(alpha: 0.0)],
+                colors: [
+                  (isDark ? const Color(0xFF10B981) : const Color(0xFF059669))
+                      .withValues(alpha: isDark ? 0.20 : 0.16),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
         ),
 
-        // Ambient Blob Bottom Center
+        // Radiant Orb 2: Top-Right Monochromatic Luminous Highlight
         Positioned(
-          bottom: -60,
-          left: 40,
+          top: 60,
+          right: -80,
           width: 360,
           height: 360,
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [blob3, blob3.withValues(alpha: 0.0)],
+                colors: [
+                  (isDark ? Colors.white : const Color(0xFF0F172A))
+                      .withValues(alpha: isDark ? 0.12 : 0.08),
+                  Colors.transparent,
+                ],
               ),
+            ),
+          ),
+        ),
+
+        // Radiant Orb 3: Mid-Left Subtle Rose Warmth
+        Positioned(
+          top: 360,
+          left: -100,
+          width: 360,
+          height: 360,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  (isDark ? const Color(0xFFF43F5E) : const Color(0xFFDC2626))
+                      .withValues(alpha: isDark ? 0.12 : 0.09),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Radiant Orb 4: Bottom-Right Cool Indigo Depth
+        Positioned(
+          bottom: -70,
+          right: -40,
+          width: 400,
+          height: 400,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
+                      .withValues(alpha: isDark ? 0.10 : 0.07),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Subtle Topographic Geometric Mesh (Shimmers through blurred glass)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _BackgroundMeshPainter(isDark: isDark),
             ),
           ),
         ),
@@ -80,6 +135,83 @@ class GlassBackground extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Custom painter that draws faint, luxury topographic contour waves
+/// so that frosted glass BackdropFilters produce optical refraction.
+class _BackgroundMeshPainter extends CustomPainter {
+  final bool isDark;
+
+  const _BackgroundMeshPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = isDark
+          ? Colors.white.withValues(alpha: 0.035)
+          : const Color(0xFF0F172A).withValues(alpha: 0.030)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final accentPaint = Paint()
+      ..color = (isDark ? const Color(0xFF34D399) : const Color(0xFF059669))
+          .withValues(alpha: 0.045)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    // Curved contour wave 1 (upper section)
+    final path1 = Path();
+    path1.moveTo(-40, size.height * 0.16);
+    path1.cubicTo(
+      size.width * 0.35,
+      size.height * 0.10,
+      size.width * 0.65,
+      size.height * 0.26,
+      size.width + 50,
+      size.height * 0.20,
+    );
+    canvas.drawPath(path1, linePaint);
+
+    // Curved contour wave 2 (mid section)
+    final path2 = Path();
+    path2.moveTo(-50, size.height * 0.38);
+    path2.cubicTo(
+      size.width * 0.30,
+      size.height * 0.46,
+      size.width * 0.70,
+      size.height * 0.32,
+      size.width + 60,
+      size.height * 0.44,
+    );
+    canvas.drawPath(path2, accentPaint);
+
+    // Curved contour wave 3 (lower section)
+    final path3 = Path();
+    path3.moveTo(-40, size.height * 0.65);
+    path3.cubicTo(
+      size.width * 0.40,
+      size.height * 0.58,
+      size.width * 0.60,
+      size.height * 0.74,
+      size.width + 50,
+      size.height * 0.68,
+    );
+    canvas.drawPath(path3, linePaint);
+
+    // Concentric geometric rings (Upper Right)
+    final center1 = Offset(size.width * 0.88, size.height * 0.16);
+    canvas.drawCircle(center1, 110, linePaint);
+    canvas.drawCircle(center1, 170, accentPaint);
+
+    // Concentric geometric rings (Lower Left)
+    final center2 = Offset(size.width * 0.10, size.height * 0.78);
+    canvas.drawCircle(center2, 130, linePaint);
+    canvas.drawCircle(center2, 200, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BackgroundMeshPainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
 }
 
 /// A Scaffold wrapper that automatically embeds the GlassBackground
@@ -137,11 +269,11 @@ class GlassCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(18),
     this.margin,
-    this.borderRadius = 22,
+    this.borderRadius = AppRadius.card,
     this.onTap,
     this.customFill,
     this.customBorder,
-    this.blur = 12,
+    this.blur = 20,
   });
 
   @override
@@ -157,9 +289,16 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: fill,
+            color: customFill == null && isDark ? null : fill,
+            gradient: customFill == null && isDark
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0x1FFFFFFF), Color(0x08FFFFFF)],
+                  )
+                : null,
             borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: border, width: 1.2),
+            border: Border.all(color: border, width: 1),
             boxShadow: [
               BoxShadow(
                 color: isDark ? const Color(0x33000000) : const Color(0x0C0F172A),
@@ -306,7 +445,10 @@ class GlassButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
     final primaryColor = backgroundColor ?? (isDark ? AppColors.primaryDark : AppColors.primaryLight);
-    final textColor = foregroundColor ?? (isOutlined ? primaryColor : Colors.white);
+    final effectiveContrastColor = primaryColor.computeLuminance() > 0.5
+        ? const Color(0xFF0F172A)
+        : Colors.white;
+    final textColor = foregroundColor ?? (isOutlined ? primaryColor : effectiveContrastColor);
 
     if (isOutlined) {
       return Container(
@@ -378,22 +520,22 @@ class GlassButton extends StatelessWidget {
           onTap: isLoading ? null : onPressed,
           child: Center(
             child: isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 2.2, color: textColor),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, size: 19, color: Colors.white),
+                        Icon(icon, size: 19, color: textColor),
                         const SizedBox(width: 8),
                       ],
                       Text(
                         label,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: textColor,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                           letterSpacing: 0.2,
@@ -693,7 +835,9 @@ Future<bool?> showGlassConfirmDialog({
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: actionColor,
-              foregroundColor: Colors.white,
+              foregroundColor: actionColor.computeLuminance() > 0.5
+                  ? const Color(0xFF0F172A)
+                  : Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -735,34 +879,48 @@ class GlassBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
-    final activeColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
-    final inactiveColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final activeColor = isDark ? Colors.white : AppColors.primaryLight;
+    final inactiveColor = isDark
+        ? Colors.white.withValues(alpha: 0.60)
+        : AppColors.textSecondaryLight;
 
     return SafeArea(
       top: false,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: isDark ? const Color(0x4D000000) : const Color(0x180F172A),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: isDark ? Colors.black.withValues(alpha: 0.45) : const Color(0x180F172A),
+              blurRadius: 28,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xDE1E293B) : const Color(0xEEFFFFFF),
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(28),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [
+                          Colors.white.withValues(alpha: 0.16),
+                          Colors.white.withValues(alpha: 0.06),
+                        ]
+                      : [
+                          Colors.white.withValues(alpha: 0.60),
+                          Colors.white.withValues(alpha: 0.35),
+                        ],
+                ),
                 border: Border.all(
-                  color: isDark ? AppColors.glassBorderDark : const Color(0x4DFFFFFF),
+                  color: Colors.white.withValues(alpha: isDark ? 0.30 : 0.75),
                   width: 1.2,
                 ),
               ),
@@ -774,19 +932,36 @@ class GlassBottomNav extends StatelessWidget {
 
                   return InkWell(
                     onTap: () => onItemSelected(idx),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOutCubic,
                       padding: EdgeInsets.symmetric(
-                        horizontal: isSelected ? 12 : 10,
+                        horizontal: isSelected ? 14 : 10,
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? activeColor.withValues(alpha: isDark ? 0.22 : 0.14)
+                            ? (isDark
+                                ? Colors.white.withValues(alpha: 0.22)
+                                : Colors.white.withValues(alpha: 0.80))
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
+                        border: isSelected
+                            ? Border.all(
+                                color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.9),
+                                width: 1,
+                              )
+                            : null,
+                        boxShadow: (isSelected && !isDark)
+                            ? [
+                                const BoxShadow(
+                                  color: Color(0x10000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -794,7 +969,7 @@ class GlassBottomNav extends StatelessWidget {
                           Icon(
                             isSelected ? item.selectedIcon : item.unselectedIcon,
                             color: isSelected ? activeColor : inactiveColor,
-                            size: 22,
+                            size: 21,
                           ),
                           if (isSelected) ...[
                             const SizedBox(width: 6),
@@ -845,6 +1020,9 @@ class GlassCircularFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
     final primaryColor = color ?? (isDark ? AppColors.primaryDark : AppColors.primaryLight);
+    final iconColor = primaryColor.computeLuminance() > 0.5
+        ? const Color(0xFF0F172A)
+        : Colors.white;
 
     final fab = Container(
       margin: EdgeInsets.only(bottom: bottomMargin, right: 6),
@@ -877,7 +1055,7 @@ class GlassCircularFab extends StatelessWidget {
           child: Tooltip(
             message: tooltip ?? 'Tambah',
             child: Center(
-              child: Icon(icon, color: Colors.white, size: 30),
+              child: Icon(icon, color: iconColor, size: 30),
             ),
           ),
         ),
@@ -891,21 +1069,76 @@ class GlassCircularFab extends StatelessWidget {
   }
 }
 
-/// Reusable Glass Sliver Pull-To-Refresh control that physically slides
-/// the page content downward with elastic bounce physics and displays a
-/// sleek glass status capsule.
-class GlassSliverRefreshControl extends StatelessWidget {
+/// Reusable Glass Sliver Pull-To-Refresh control with buttery-smooth
+/// physics and a sleek frosted glass pill indicator.
+///
+/// Features:
+/// - Locks in "Lepas untuk memperbarui" while holding down past trigger threshold
+/// - Never prematurely cancels or resets back to "Tarik ke bawah" while finger is touching
+/// - Only triggers refresh completion when the user actually releases their touch
+/// - Smooth animated transitions with high-contrast text and adaptive icon
+class GlassSliverRefreshControl extends StatefulWidget {
   final Future<void> Function() onRefresh;
+  final double refreshTriggerPullDistance;
+  final double refreshIndicatorExtent;
 
-  const GlassSliverRefreshControl({super.key, required this.onRefresh});
+  const GlassSliverRefreshControl({
+    super.key,
+    required this.onRefresh,
+    this.refreshTriggerPullDistance = 88.0,
+    this.refreshIndicatorExtent = 52.0,
+  });
+
+  @override
+  State<GlassSliverRefreshControl> createState() => _GlassSliverRefreshControlState();
+}
+
+class _GlassSliverRefreshControlState extends State<GlassSliverRefreshControl> {
+  Completer<void>? _refreshCompleter;
+  bool _hasReleased = false;
+
+  Future<void> _handleRefresh() async {
+    final completer = Completer<void>();
+    _refreshCompleter = completer;
+    _hasReleased = false;
+
+    // Run the actual user refresh in background
+    final Future<void> refreshFuture = widget.onRefresh();
+
+    unawaited(() async {
+      try {
+        await refreshFuture;
+      } catch (_) {}
+
+      // Wait until the user has actually released their finger
+      // (which transitions CupertinoSliverRefreshControl into RefreshIndicatorMode.refresh)
+      final timeoutWatch = Stopwatch()..start();
+      while (!_hasReleased && mounted && _refreshCompleter == completer) {
+        if (timeoutWatch.elapsedMilliseconds > 12000) break; // 12s safety timeout
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      }
+
+      // Smooth visual grace period so the spinner is satisfying and legible
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+
+      if (mounted && !completer.isCompleted) {
+        completer.complete();
+      }
+    }());
+
+    return completer.future;
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
-    final accent = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    final activeColor = isDark ? Colors.white : AppColors.primaryLight;
+    final textColor = isDark ? Colors.white : AppColors.textPrimaryLight;
 
     return CupertinoSliverRefreshControl(
-      onRefresh: onRefresh,
+      onRefresh: _handleRefresh,
+      refreshTriggerPullDistance: widget.refreshTriggerPullDistance,
+      refreshIndicatorExtent: widget.refreshIndicatorExtent,
       builder: (
         BuildContext context,
         RefreshIndicatorMode refreshState,
@@ -913,69 +1146,66 @@ class GlassSliverRefreshControl extends StatelessWidget {
         double refreshTriggerPullDistance,
         double refreshIndicatorExtent,
       ) {
-        final double opacity = (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0);
+        if (refreshState == RefreshIndicatorMode.refresh) {
+          _hasReleased = true;
+        } else if (refreshState == RefreshIndicatorMode.inactive && pulledExtent <= 0) {
+          if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+            _refreshCompleter!.complete();
+          }
+        }
+
+        if (pulledExtent <= 6) return const SizedBox.shrink();
+
         final bool isRefreshing = refreshState == RefreshIndicatorMode.refresh;
         final bool isArmed = refreshState == RefreshIndicatorMode.armed;
+        final double progress = (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0);
 
-        if (pulledExtent <= 0) return const SizedBox.shrink();
-
-        return Container(
-          height: pulledExtent,
-          alignment: Alignment.center,
-          child: Opacity(
-            opacity: opacity,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xE61E293B) : const Color(0xF2FFFFFF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.45),
-                  width: 1.2,
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.16)
+                  : Colors.white.withValues(alpha: 0.70),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.8),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.30)
+                      : const Color(0x0E0F172A),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                isRefreshing
+                    ? CupertinoActivityIndicator(radius: 9, color: activeColor)
+                    : CupertinoActivityIndicator.partiallyRevealed(
+                        radius: 9,
+                        color: activeColor,
+                        progress: progress,
+                      ),
+                const SizedBox(width: 8),
+                Text(
+                  isRefreshing
+                      ? 'Memperbarui data...'
+                      : (isArmed ? 'Lepas untuk memperbarui' : 'Tarik ke bawah'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                    decoration: TextDecoration.none,
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: isRefreshing
-                        ? CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: accent,
-                          )
-                        : Transform.rotate(
-                            angle: opacity * 3.14159,
-                            child: Icon(
-                              isArmed ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                              size: 16,
-                              color: accent,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isRefreshing
-                        ? 'Memperbarui...'
-                        : (isArmed ? 'Lepas untuk segarkan' : 'Tarik untuk segarkan'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

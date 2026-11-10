@@ -55,7 +55,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
               ref.invalidate(transactionsForMonthProvider);
               ref.invalidate(savingGoalsProvider);
               ref.invalidate(categoriesProvider(null));
-              await Future.delayed(const Duration(milliseconds: 500));
+              await Future.delayed(const Duration(milliseconds: 600));
             },
           ),
           SliverToBoxAdapter(
@@ -82,6 +82,7 @@ class _TransactionListScreenState extends ConsumerState<TransactionListScreen> {
             ),
           ),
           ...transactionsAsync.when(
+            skipLoadingOnRefresh: true,
             data: (allTransactions) {
               final filtered = _selectedFilter == null
                   ? allTransactions
@@ -318,6 +319,7 @@ class _FilterBar extends StatelessWidget {
             label: 'Semua',
             isSelected: selected == null,
             color: primaryColor,
+            isDark: isDark,
             onTap: () => onSelected(null),
           ),
           const SizedBox(width: 8),
@@ -325,6 +327,7 @@ class _FilterBar extends StatelessWidget {
             label: 'Uang Masuk',
             isSelected: selected == TransactionType.income,
             color: incomeColor,
+            isDark: isDark,
             onTap: () => onSelected(
               selected == TransactionType.income ? null : TransactionType.income,
             ),
@@ -334,6 +337,7 @@ class _FilterBar extends StatelessWidget {
             label: 'Uang Keluar',
             isSelected: selected == TransactionType.expense,
             color: expenseColor,
+            isDark: isDark,
             onTap: () => onSelected(
               selected == TransactionType.expense ? null : TransactionType.expense,
             ),
@@ -343,6 +347,7 @@ class _FilterBar extends StatelessWidget {
             label: 'Tabungan',
             isSelected: selected == TransactionType.saving,
             color: primaryColor,
+            isDark: isDark,
             onTap: () => onSelected(
               selected == TransactionType.saving ? null : TransactionType.saving,
             ),
@@ -352,6 +357,7 @@ class _FilterBar extends StatelessWidget {
             label: 'Investasi',
             isSelected: selected == TransactionType.investment,
             color: primaryColor,
+            isDark: isDark,
             onTap: () => onSelected(
               selected == TransactionType.investment ? null : TransactionType.investment,
             ),
@@ -365,6 +371,7 @@ class _FilterBar extends StatelessWidget {
     required String label,
     required bool isSelected,
     required Color color,
+    required bool isDark,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -386,7 +393,11 @@ class _FilterBar extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? color : null,
+            color: isSelected
+                ? color
+                : (isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight),
           ),
         ),
       ),

@@ -97,6 +97,11 @@ class _MonthlyReportScreenState extends ConsumerState<MonthlyReportScreen> {
                   underline: const SizedBox.shrink(),
                   isDense: true,
                   dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  style: TextStyle(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Semua Pos')),
                     DropdownMenuItem(value: TransactionType.expense, child: Text('Pengeluaran')),

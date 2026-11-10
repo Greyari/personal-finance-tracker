@@ -110,7 +110,7 @@ class _CategoryListScreenState extends ConsumerState<CategoryListScreen>
                   ),
                 ],
               ),
-              labelColor: Colors.white,
+              labelColor: isDark ? const Color(0xFF0F172A) : Colors.white,
               unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               dividerColor: Colors.transparent,
