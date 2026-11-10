@@ -184,7 +184,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _FuturisticBalanceCard(
                   sisa: summary.sisa,
                   income: summary.totalIncome,
-                  expense: summary.totalExpense,
+                  expense: summary.totalOutflow,
                   dailyLimit: dailyLimit,
                   hideBalance: _hideBalance,
                   onToggleHide: () => setState(() => _hideBalance = !_hideBalance),
@@ -1050,9 +1050,12 @@ class _RecentTransactionsSection extends StatelessWidget {
                     sign = '-';
                     break;
                   case TransactionType.saving:
+                    amountColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+                    sign = '-';
+                    break;
                   case TransactionType.investment:
                     amountColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
-                    sign = '';
+                    sign = '-';
                     break;
                 }
 

@@ -173,24 +173,10 @@ class _TotalsCard extends StatelessWidget {
             color: isDark ? const Color(0x1AFFFFFF) : const Color(0x10000000),
           ),
           _TotalRow(
-            label: 'Total Pengeluaran (Keluar)',
+            label: 'Total Pengeluaran (Belanja)',
             amount: summary.totalExpense,
             color: expenseColor,
             icon: Icons.arrow_upward_rounded,
-          ),
-          Divider(
-            height: 22,
-            color: isDark ? const Color(0x1AFFFFFF) : const Color(0x10000000),
-          ),
-          _TotalRow(
-            label: 'Selisih Kas Bersih (Net)',
-            amount: summary.netCashFlow,
-            color: summary.netCashFlow >= 0
-                ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                : expenseColor,
-            showPlusIfPositive: true,
-            icon: Icons.swap_horiz_rounded,
-            isBold: true,
           ),
           Divider(
             height: 22,
@@ -211,6 +197,20 @@ class _TotalsCard extends StatelessWidget {
             amount: summary.totalInvestment,
             color: primaryColor,
             icon: Icons.trending_up_rounded,
+          ),
+          Divider(
+            height: 22,
+            color: isDark ? const Color(0x1AFFFFFF) : const Color(0x10000000),
+          ),
+          _TotalRow(
+            label: 'Sisa Saldo Kas Sekarang (Net)',
+            amount: summary.sisa,
+            color: summary.sisa >= 0
+                ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
+                : expenseColor,
+            showPlusIfPositive: true,
+            icon: Icons.account_balance_wallet_rounded,
+            isBold: true,
           ),
         ],
       ),
@@ -283,12 +283,12 @@ class _CashFlowChartCard extends StatelessWidget {
     final isDark = AppColors.isDark(context);
     final incomeColor = AppColors.income(context);
     final expenseColor = AppColors.expense(context);
-    final total = summary.totalIncome + summary.totalExpense;
+    final total = summary.totalIncome + summary.totalOutflow;
 
     if (total <= 0) return const SizedBox.shrink();
 
     final incomePct = ((summary.totalIncome / total) * 100).round();
-    final expensePct = 100 - incomePct;
+    final outflowPct = 100 - incomePct;
 
     return GlassCard(
       padding: const EdgeInsets.all(20),
@@ -322,9 +322,9 @@ class _CashFlowChartCard extends StatelessWidget {
                           radius: 24,
                           showTitle: false,
                         ),
-                      if (summary.totalExpense > 0)
+                      if (summary.totalOutflow > 0)
                         PieChartSectionData(
-                          value: summary.totalExpense,
+                          value: summary.totalOutflow,
                           color: expenseColor,
                           radius: 24,
                           showTitle: false,
@@ -347,9 +347,9 @@ class _CashFlowChartCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     _ChartLegend(
                       color: expenseColor,
-                      label: 'Pengeluaran',
-                      percent: '$expensePct%',
-                      amount: CurrencyFormatter.format(summary.totalExpense),
+                      label: 'Total Keluar',
+                      percent: '$outflowPct%',
+                      amount: CurrencyFormatter.format(summary.totalOutflow),
                     ),
                   ],
                 ),

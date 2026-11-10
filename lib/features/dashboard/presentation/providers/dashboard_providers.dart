@@ -18,11 +18,14 @@ class MonthlySummary {
     required this.totalInvestment,
   });
 
+  /// Total uang keluar dari dompet/kas aktif (belanja + tabungan + investasi).
+  double get totalOutflow => totalExpense + totalSaving + totalInvestment;
+
   /// "Sisa" — money not yet spent, saved, or invested this month.
   double get sisa => totalIncome - totalExpense - totalSaving - totalInvestment;
 
-  /// Net Cashflow: Uang Masuk dikurangi Uang Keluar (Pemasukan - Pengeluaran)
-  double get netCashFlow => totalIncome - totalExpense;
+  /// Net Cashflow: Uang masuk dikurangi semua uang keluar (termasuk tabungan & investasi).
+  double get netCashFlow => totalIncome - totalExpense - totalSaving - totalInvestment;
 
   double get savingRate => totalIncome <= 0 ? 0 : (totalSaving / totalIncome) * 100;
   double get investmentRate => totalIncome <= 0 ? 0 : (totalInvestment / totalIncome) * 100;

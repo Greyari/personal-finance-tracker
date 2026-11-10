@@ -11,8 +11,10 @@ void main() {
         totalInvestment: 1000000,
       );
 
-      // netCashFlow = income - expense
-      expect(summary.netCashFlow, 6000000);
+      // totalOutflow = expense + saving + investment
+      expect(summary.totalOutflow, 7000000);
+      // netCashFlow = sisa = income - totalOutflow
+      expect(summary.netCashFlow, 3000000);
       // sisa = income - expense - saving - investment
       expect(summary.sisa, 3000000);
       expect(summary.savingRate, 20.0);

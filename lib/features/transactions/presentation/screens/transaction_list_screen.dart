@@ -164,7 +164,7 @@ class _MonthCashFlowBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
-    final net = summary.netCashFlow;
+    final net = summary.sisa;
     final isPositive = net >= 0;
     final incomeColor = AppColors.income(context);
     final expenseColor = AppColors.expense(context);
@@ -241,7 +241,7 @@ class _MonthCashFlowBanner extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      CurrencyFormatter.format(summary.totalExpense),
+                      CurrencyFormatter.format(summary.totalOutflow),
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
@@ -258,13 +258,13 @@ class _MonthCashFlowBanner extends StatelessWidget {
               color: isDark ? const Color(0x22FFFFFF) : const Color(0x18000000),
             ),
             const SizedBox(width: 12),
-            // Selisih
+            // Sisa Saldo Sekarang
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Selisih',
+                    'Sisa Saldo',
                     style: TextStyle(
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                       fontSize: 11.5,
@@ -421,9 +421,12 @@ class _TransactionTile extends StatelessWidget {
         sign = '-';
         break;
       case TransactionType.saving:
+        amountColor = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+        sign = '-';
+        break;
       case TransactionType.investment:
         amountColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
-        sign = '';
+        sign = '-';
         break;
     }
 
