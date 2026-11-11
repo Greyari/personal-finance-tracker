@@ -2,19 +2,28 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_provider.dart';
 
-/// Background with rich ambient glowing color blobs and subtle
+/// Background with rich wallpaper art, ambient glowing color blobs, and subtle
 /// topographic contour mesh that provides stunning optical depth
 /// and refraction for Glassmorphism.
-class GlassBackground extends StatelessWidget {
+class GlassBackground extends ConsumerWidget {
   final Widget child;
+  final String? customBackgroundImage;
 
-  const GlassBackground({super.key, required this.child});
+  const GlassBackground({
+    super.key,
+    required this.child,
+    this.customBackgroundImage,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = AppColors.isDark(context);
+    final currentWallpaper = ref.watch(appWallpaperProvider);
+    final imagePath = customBackgroundImage ?? currentWallpaper.assetPath;
 
     return Stack(
       children: [
@@ -41,6 +50,38 @@ class GlassBackground extends StatelessWidget {
           ),
         ),
 
+        // Wallpaper Background Image (Fluid Glass / Topography / Aurora)
+        if (imagePath != null)
+          Positioned.fill(
+            child: Opacity(
+              opacity: isDark ? 0.78 : 0.12,
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+
+        // Subtle dark vignette gradient overlay in dark mode to ensure text contrast and elegance
+        if (isDark)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.28),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.45),
+                  ],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
+            ),
+          ),
+
         // Radiant Orb 1: Top-Left Emerald Aura (Uang & Pertumbuhan)
         Positioned(
           top: -90,
@@ -53,7 +94,7 @@ class GlassBackground extends StatelessWidget {
               gradient: RadialGradient(
                 colors: [
                   (isDark ? const Color(0xFF10B981) : const Color(0xFF059669))
-                      .withValues(alpha: isDark ? 0.20 : 0.16),
+                      .withValues(alpha: isDark ? 0.16 : 0.12),
                   Colors.transparent,
                 ],
               ),
@@ -73,7 +114,7 @@ class GlassBackground extends StatelessWidget {
               gradient: RadialGradient(
                 colors: [
                   (isDark ? Colors.white : const Color(0xFF0F172A))
-                      .withValues(alpha: isDark ? 0.12 : 0.08),
+                      .withValues(alpha: isDark ? 0.10 : 0.06),
                   Colors.transparent,
                 ],
               ),
@@ -93,7 +134,7 @@ class GlassBackground extends StatelessWidget {
               gradient: RadialGradient(
                 colors: [
                   (isDark ? const Color(0xFFF43F5E) : const Color(0xFFDC2626))
-                      .withValues(alpha: isDark ? 0.12 : 0.09),
+                      .withValues(alpha: isDark ? 0.10 : 0.07),
                   Colors.transparent,
                 ],
               ),
@@ -113,7 +154,7 @@ class GlassBackground extends StatelessWidget {
               gradient: RadialGradient(
                 colors: [
                   (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
-                      .withValues(alpha: isDark ? 0.10 : 0.07),
+                      .withValues(alpha: isDark ? 0.08 : 0.05),
                   Colors.transparent,
                 ],
               ),
@@ -223,6 +264,7 @@ class GlassScaffold extends StatelessWidget {
   final bool extendBody;
   final bool extendBodyBehindAppBar;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final String? customBackgroundImage;
 
   const GlassScaffold({
     super.key,
@@ -233,11 +275,13 @@ class GlassScaffold extends StatelessWidget {
     this.extendBody = false,
     this.extendBodyBehindAppBar = false,
     this.floatingActionButtonLocation,
+    this.customBackgroundImage,
   });
 
   @override
   Widget build(BuildContext context) {
     return GlassBackground(
+      customBackgroundImage: customBackgroundImage,
       child: Scaffold(
         extendBody: extendBody,
         extendBodyBehindAppBar: extendBodyBehindAppBar,

@@ -34,6 +34,7 @@ class SettingsScreen extends ConsumerWidget {
     final isDark = AppColors.isDark(context);
     final profileAsync = ref.watch(userProfileProvider);
     final currentThemeMode = ref.watch(themeNotifierProvider);
+    final currentWallpaper = ref.watch(appWallpaperProvider);
     final primaryColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
 
     return Scaffold(
@@ -173,6 +174,121 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0),
+          const SizedBox(height: 18),
+
+          // Wallpaper Background Section
+          GlassCard(
+            padding: const EdgeInsets.all(18),
+            borderRadius: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.wallpaper_rounded, size: 20, color: primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Wallpaper Latar Belakang',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Pilih gaya seni visual yang membiaskan kaca (Monochrome Glass):',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: AppWallpaper.values.map((wp) {
+                      final isSelected = currentWallpaper == wp;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: InkWell(
+                          onTap: () => ref.read(appWallpaperProvider.notifier).setWallpaper(wp),
+                          borderRadius: BorderRadius.circular(16),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: 104,
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: isSelected
+                                  ? primaryColor.withValues(alpha: isDark ? 0.22 : 0.12)
+                                  : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                              border: Border.all(
+                                color: isSelected
+                                    ? primaryColor
+                                    : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.10),
+                                width: isSelected ? 1.8 : 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    height: 110,
+                                    width: double.infinity,
+                                    color: isDark ? const Color(0xFF0F131D) : const Color(0xFFE2E8F0),
+                                    child: wp.assetPath != null
+                                        ? Image.asset(
+                                            wp.assetPath!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Center(
+                                              child: Icon(Icons.broken_image_rounded, size: 24),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Icon(
+                                              Icons.layers_clear_rounded,
+                                              size: 28,
+                                              color: isDark ? Colors.white38 : Colors.black38,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  wp.name == 'fluidGlass'
+                                      ? '1. Fluid Glass'
+                                      : wp.name == 'architectural'
+                                          ? '2. Topography'
+                                          : wp.name == 'auroraMesh'
+                                              ? '3. Aurora'
+                                              : 'Polos',
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    fontSize: 11.5,
+                                    color: isSelected
+                                        ? primaryColor
+                                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(duration: 380.ms).slideY(begin: 0.1, end: 0),
           const SizedBox(height: 18),
 
           // Menu Options
