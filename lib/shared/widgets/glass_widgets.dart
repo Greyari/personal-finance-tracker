@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_provider.dart';
 
-/// Background with rich wallpaper art, ambient glowing color blobs, and subtle
-/// topographic contour mesh that provides stunning optical depth
-/// and refraction for Glassmorphism.
+/// Background with rich wallpaper art and ambient glowing color blobs
+/// that provide stunning optical depth and refraction for Glassmorphism.
 class GlassBackground extends ConsumerWidget {
   final Widget child;
   final String? customBackgroundImage;
@@ -22,8 +22,11 @@ class GlassBackground extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = AppColors.isDark(context);
-    final currentWallpaper = ref.watch(appWallpaperProvider);
-    final imagePath = customBackgroundImage ?? currentWallpaper.assetPath;
+    final wpState = ref.watch(appWallpaperProvider);
+    final String? imagePath = customBackgroundImage ?? wpState.resolvedImagePath;
+    final bool isFromFile = customBackgroundImage != null
+        ? !customBackgroundImage!.startsWith('assets/')
+        : wpState.isCustomFile;
 
     return Stack(
       children: [
@@ -50,16 +53,22 @@ class GlassBackground extends ConsumerWidget {
           ),
         ),
 
-        // Wallpaper Background Image (Fluid Glass / Topography / Aurora)
+        // Wallpaper Background Image (Fluid Glass / Topography / Aurora / Custom File)
         if (imagePath != null)
           Positioned.fill(
             child: Opacity(
-              opacity: isDark ? 0.78 : 0.12,
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
+              opacity: isDark ? 0.78 : 0.15,
+              child: isFromFile
+                  ? Image.file(
+                      File(imagePath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    )
+                  : Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
             ),
           ),
 
@@ -162,97 +171,11 @@ class GlassBackground extends ConsumerWidget {
           ),
         ),
 
-        // Subtle Topographic Geometric Mesh (Shimmers through blurred glass)
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _BackgroundMeshPainter(isDark: isDark),
-            ),
-          ),
-        ),
-
-        // Foreground content
+        // Foreground content (mesh lines removed per user request)
         Positioned.fill(child: child),
       ],
     );
   }
-}
-
-/// Custom painter that draws faint, luxury topographic contour waves
-/// so that frosted glass BackdropFilters produce optical refraction.
-class _BackgroundMeshPainter extends CustomPainter {
-  final bool isDark;
-
-  const _BackgroundMeshPainter({required this.isDark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = isDark
-          ? Colors.white.withValues(alpha: 0.035)
-          : const Color(0xFF0F172A).withValues(alpha: 0.030)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final accentPaint = Paint()
-      ..color = (isDark ? const Color(0xFF34D399) : const Color(0xFF059669))
-          .withValues(alpha: 0.045)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    // Curved contour wave 1 (upper section)
-    final path1 = Path();
-    path1.moveTo(-40, size.height * 0.16);
-    path1.cubicTo(
-      size.width * 0.35,
-      size.height * 0.10,
-      size.width * 0.65,
-      size.height * 0.26,
-      size.width + 50,
-      size.height * 0.20,
-    );
-    canvas.drawPath(path1, linePaint);
-
-    // Curved contour wave 2 (mid section)
-    final path2 = Path();
-    path2.moveTo(-50, size.height * 0.38);
-    path2.cubicTo(
-      size.width * 0.30,
-      size.height * 0.46,
-      size.width * 0.70,
-      size.height * 0.32,
-      size.width + 60,
-      size.height * 0.44,
-    );
-    canvas.drawPath(path2, accentPaint);
-
-    // Curved contour wave 3 (lower section)
-    final path3 = Path();
-    path3.moveTo(-40, size.height * 0.65);
-    path3.cubicTo(
-      size.width * 0.40,
-      size.height * 0.58,
-      size.width * 0.60,
-      size.height * 0.74,
-      size.width + 50,
-      size.height * 0.68,
-    );
-    canvas.drawPath(path3, linePaint);
-
-    // Concentric geometric rings (Upper Right)
-    final center1 = Offset(size.width * 0.88, size.height * 0.16);
-    canvas.drawCircle(center1, 110, linePaint);
-    canvas.drawCircle(center1, 170, accentPaint);
-
-    // Concentric geometric rings (Lower Left)
-    final center2 = Offset(size.width * 0.10, size.height * 0.78);
-    canvas.drawCircle(center2, 130, linePaint);
-    canvas.drawCircle(center2, 200, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BackgroundMeshPainter oldDelegate) =>
-      oldDelegate.isDark != isDark;
 }
 
 /// A Scaffold wrapper that automatically embeds the GlassBackground

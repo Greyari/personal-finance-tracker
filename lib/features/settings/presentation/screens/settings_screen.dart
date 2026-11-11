@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/utils/cover_image_picker.dart';
 import '../../../../shared/widgets/glass_widgets.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../categories/presentation/screens/category_list_screen.dart';
@@ -26,6 +30,151 @@ class SettingsScreen extends ConsumerWidget {
     );
     if (confirmed == true) {
       await ref.read(authControllerProvider.notifier).signOut();
+    }
+  }
+
+  Future<void> _pickCustomWallpaper(BuildContext context, WidgetRef ref) async {
+    final isDark = AppColors.isDark(context);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF131826) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Upload Wallpaper Sendiri',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.photo_library_rounded, color: isDark ? Colors.white : Colors.black),
+                ),
+                title: Text(
+                  'Pilih dari Galeri',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+                subtitle: Text(
+                  'Gunakan foto favorit dari memori HP kamu',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.camera_alt_rounded, color: isDark ? Colors.white : Colors.black),
+                ),
+                title: Text(
+                  'Ambil dari Kamera',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+                subtitle: Text(
+                  'Potret foto baru secara langsung',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source != null) {
+      final path = await CoverImagePicker.pickWallpaper(source);
+      if (!context.mounted) return;
+      if (path != null) {
+        await ref.read(appWallpaperProvider.notifier).setCustomWallpaper(path);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto berhasil dipasang sebagai wallpaper!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteCustomWallpaper(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showGlassConfirmDialog(
+      context: context,
+      title: 'Hapus Foto Kustom',
+      message: 'Apakah Anda yakin ingin menghapus foto ini? Latar belakang akan dikembalikan ke Ghibli Klasik.',
+      confirmLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      isDestructive: true,
+      icon: Icons.delete_outline_rounded,
+    );
+
+    if (confirmed == true && context.mounted) {
+      final customPath = ref.read(appWallpaperProvider).customFilePath;
+      if (customPath != null) {
+        final file = File(customPath);
+        if (await file.exists()) {
+          try {
+            await file.delete();
+          } catch (_) {}
+        }
+      }
+      await ref.read(appWallpaperProvider.notifier).clearCustomWallpaper();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto kustom berhasil dihapus. Wallpaper kembali ke Ghibli Klasik.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -184,22 +333,93 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.wallpaper_rounded, size: 20, color: primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Wallpaper Latar Belakang',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.wallpaper_rounded, size: 20, color: primaryColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Wallpaper Latar Belakang',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (currentWallpaper.customFilePath != null) ...[
+                          InkWell(
+                            onTap: () => _confirmDeleteCustomWallpaper(context, ref),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.expense(context).withValues(alpha: isDark ? 0.15 : 0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.expense(context).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.expense(context)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Hapus Foto',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.expense(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        InkWell(
+                          onTap: () => _pickCustomWallpaper(context, ref),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: primaryColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add_photo_alternate_rounded, size: 14, color: primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  currentWallpaper.customFilePath != null ? 'Ganti Foto' : 'Upload Foto',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Pilih gaya seni visual yang membiaskan kaca (Monochrome Glass):',
+                  'Pilih gaya seni visual atau upload foto kamu sendiri:',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -210,80 +430,42 @@ class SettingsScreen extends ConsumerWidget {
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   child: Row(
-                    children: AppWallpaper.values.map((wp) {
-                      final isSelected = currentWallpaper == wp;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: InkWell(
-                          onTap: () => ref.read(appWallpaperProvider.notifier).setWallpaper(wp),
-                          borderRadius: BorderRadius.circular(16),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            width: 104,
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: isSelected
-                                  ? primaryColor.withValues(alpha: isDark ? 0.22 : 0.12)
-                                  : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
-                              border: Border.all(
-                                color: isSelected
-                                    ? primaryColor
-                                    : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.10),
-                                width: isSelected ? 1.8 : 1.0,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    height: 110,
-                                    width: double.infinity,
-                                    color: isDark ? const Color(0xFF0F131D) : const Color(0xFFE2E8F0),
-                                    child: wp.assetPath != null
-                                        ? Image.asset(
-                                            wp.assetPath!,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const Center(
-                                              child: Icon(Icons.broken_image_rounded, size: 24),
-                                            ),
-                                          )
-                                        : Center(
-                                            child: Icon(
-                                              Icons.layers_clear_rounded,
-                                              size: 28,
-                                              color: isDark ? Colors.white38 : Colors.black38,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  wp.name == 'fluidGlass'
-                                      ? '1. Fluid Glass'
-                                      : wp.name == 'architectural'
-                                          ? '2. Topography'
-                                          : wp.name == 'auroraMesh'
-                                              ? '3. Aurora'
-                                              : 'Polos',
-                                  style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    fontSize: 11.5,
-                                    color: isSelected
-                                        ? primaryColor
-                                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
+                    children: [
+                      // If custom file exists, show custom card first!
+                      if (currentWallpaper.customFilePath != null) ...[
+                        _buildWallpaperItem(
+                          context: context,
+                          ref: ref,
+                          isDark: isDark,
+                          primaryColor: primaryColor,
+                          label: 'Foto Kustom',
+                          isSelected: currentWallpaper.wallpaper == AppWallpaper.custom,
+                          fileImage: File(currentWallpaper.customFilePath!),
+                          onDelete: () => _confirmDeleteCustomWallpaper(context, ref),
+                          onTap: () => ref.read(appWallpaperProvider.notifier).setWallpaper(AppWallpaper.custom),
                         ),
-                      );
-                    }).toList(),
+                        const SizedBox(width: 12),
+                      ],
+                      // Presets (excluding custom, which is handled above)
+                      ...AppWallpaper.values
+                          .where((wp) => wp != AppWallpaper.custom)
+                          .map((wp) {
+                        final isSelected = currentWallpaper.wallpaper == wp;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _buildWallpaperItem(
+                            context: context,
+                            ref: ref,
+                            isDark: isDark,
+                            primaryColor: primaryColor,
+                            label: _formatWallpaperLabel(wp),
+                            isSelected: isSelected,
+                            assetPath: wp.assetPath,
+                            onTap: () => ref.read(appWallpaperProvider.notifier).setWallpaper(wp),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ],
@@ -390,6 +572,126 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildWallpaperItem({
+    required BuildContext context,
+    required WidgetRef ref,
+    required bool isDark,
+    required Color primaryColor,
+    required String label,
+    required bool isSelected,
+    String? assetPath,
+    File? fileImage,
+    VoidCallback? onDelete,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        width: 104,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: isSelected
+              ? primaryColor.withValues(alpha: isDark ? 0.22 : 0.12)
+              : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+          border: Border.all(
+            color: isSelected
+                ? primaryColor
+                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.10),
+            width: isSelected ? 1.8 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 110,
+                    width: double.infinity,
+                    color: isDark ? const Color(0xFF0F131D) : const Color(0xFFE2E8F0),
+                    child: fileImage != null
+                        ? Image.file(
+                            fileImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image_rounded, size: 24),
+                            ),
+                          )
+                        : assetPath != null
+                            ? Image.asset(
+                                assetPath,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image_rounded, size: 24),
+                                ),
+                              )
+                            : Center(
+                                child: Icon(
+                                  Icons.layers_clear_rounded,
+                                  size: 28,
+                                  color: isDark ? Colors.white38 : Colors.black38,
+                                ),
+                              ),
+                  ),
+                ),
+                if (onDelete != null)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: InkWell(
+                      onTap: onDelete,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.70),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 14,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 11,
+                color: isSelected
+                    ? primaryColor
+                    : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatWallpaperLabel(AppWallpaper wp) {
+    switch (wp) {
+      case AppWallpaper.ghibliClassic:
+        return 'Ghibli Klasik';
+      case AppWallpaper.custom:
+        return 'Upload Sendiri';
+      case AppWallpaper.none:
+        return 'Polos';
+    }
   }
 }
 
