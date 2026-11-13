@@ -573,8 +573,8 @@ class _EmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 86,
-                height: 68,
+                width: 90,
+                height: 64,
                 child: Lottie.asset(
                   'assets/lottie/cat_mascot.json',
                   fit: BoxFit.contain,

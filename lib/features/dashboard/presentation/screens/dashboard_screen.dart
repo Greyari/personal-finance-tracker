@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -180,13 +182,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const _CatMascotBadge(),
                     ],
                   ),
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
                 ).animate().fadeIn(duration: 300.ms),
+                const SizedBox(height: 12),
+
+                // Prominent Interactive Cat Companion Card ("Kucing Cuan")
+                const _InteractiveCatHeroCard().animate().fadeIn(duration: 320.ms).slideY(begin: 0.08, end: 0),
                 const SizedBox(height: 14),
 
                 // Month Selector
@@ -1119,7 +1123,7 @@ class _RecentTransactionsSection extends StatelessWidget {
                 child: Column(
                   children: [
                     SizedBox(
-                      width: 76,
+                      width: 84,
                       height: 60,
                       child: Lottie.asset(
                         'assets/lottie/cat_mascot.json',
@@ -1574,34 +1578,77 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-/// Interactive Luxury Animated Cat Companion (Lottie Mascot)
-class _CatMascotBadge extends StatefulWidget {
-  const _CatMascotBadge();
+/// Interactive Luxury Animated Cat Companion (Lottie Mascot Hero Card)
+class _InteractiveCatHeroCard extends StatefulWidget {
+  const _InteractiveCatHeroCard();
 
   @override
-  State<_CatMascotBadge> createState() => _CatMascotBadgeState();
+  State<_InteractiveCatHeroCard> createState() => _InteractiveCatHeroCardState();
 }
 
-class _CatMascotBadgeState extends State<_CatMascotBadge> {
-  int _tipIndex = 0;
+class _InteractiveCatHeroCardState extends State<_InteractiveCatHeroCard>
+    with TickerProviderStateMixin {
+  late final AnimationController _actionController;
+  late final AnimationController _idleBobController;
+  int _cheerIndex = 0;
 
-  static const _catTips = [
-    'Meow! Saldomu aman bersamaku 🐾',
-    'Catat pengeluaran kecil, hematnya besar! 💰',
-    'Target tabungan impian makin dekat! ✨',
-    'Kucing Cuan siap jaga brankasmu! 🐱',
-    'Jangan lupa sisihkan dana darurat ya! 🛡️',
+  static const _catCheers = [
+    'Purrr... Nyaa~ Kucing Cuan senang dielus! 🐱💖',
+    'Meoww! Semangat kumpulin cuan hari ini! ✨🐾',
+    'Nyaa~ Pundi-pundi tabungan makin montok! 🐟💰',
+    'Horeee! Disiplin finansial nomor satu! 🎉🐱',
+    'Purr purr... Saldo aman, hatiku tenang! 🥰🛡️',
+    'Meow! Jangan lupa catat jajan kopi hari ini ya! ☕🐾',
+    'Kucing Cuan siap siaga jaga brankasmu! 🐾✨',
   ];
 
-  void _onTap() {
+  static const _fullTips = [
+    '🐾 Catat pengeluaran harian: Pengeluaran kecil yang bocor halus sering menjadi sumber defisit terbesar.',
+    '🎯 Amankan 20% penghasilan di awal bulan ke tabungan, jangan menunggu sisa belanja.',
+    '🛡️ Siapkan dana darurat minimal 3–6 bulan pengeluaran rutin di rekening terpisah.',
+    '✨ Evaluasi langganan berkala (streaming, membership) yang sudah jarang digunakan.',
+    '🐱 Pantau sisa budget harian di dashboard agar tetap aman terkendali hingga akhir bulan!',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _actionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _idleBobController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _actionController.dispose();
+    _idleBobController.dispose();
+    super.dispose();
+  }
+
+  void _triggerHappyPet() {
+    if (_actionController.isAnimating) return;
+
     setState(() {
-      _tipIndex = (_tipIndex + 1) % _catTips.length;
+      _cheerIndex = (_cheerIndex + 1) % _catCheers.length;
     });
 
+    HapticFeedback.lightImpact();
+
+    _actionController.forward(from: 0.0);
+  }
+
+  void _showTipsModal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         child: BackdropFilter(
@@ -1618,60 +1665,98 @@ class _CatMascotBadgeState extends State<_CatMascotBadge> {
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(999),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: 120,
-                    height: 96,
-                    child: Lottie.asset(
-                      'assets/lottie/cat_mascot.json',
-                      fit: BoxFit.contain,
-                      repeat: true,
-                    ),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 70,
+                        height: 50,
+                        child: Lottie.asset(
+                          'assets/lottie/cat_mascot.json',
+                          fit: BoxFit.contain,
+                          repeat: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tips Finansial Kucing Cuan 🐾',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              ),
+                            ),
+                            Text(
+                              'Pedoman cerdas menjaga stabilitas keuanganmu',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Kucing Cuan Finansial 🐾',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  const SizedBox(height: 18),
+                  ..._fullTips.map(
+                    (tip) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.12 : 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: const Color(0xFF34D399).withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Text(
+                          tip,
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.16 : 0.10),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF34D399).withValues(alpha: 0.35),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                    ),
-                    child: Text(
-                      '"${_catTips[_tipIndex]}"',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                      child: Text(
+                        'Tutup & Lanjutkan Nabung 🐾',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Teman pintar pembukuan finansialmu setiap hari.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                     ),
                   ),
                 ],
@@ -1687,58 +1772,288 @@ class _CatMascotBadgeState extends State<_CatMascotBadge> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: _onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF1B2236).withValues(alpha: 0.90)
-              : Colors.white.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.40 : 0.30),
-            width: 1.1,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF131826).withValues(alpha: 0.85)
+                : Colors.white.withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.32 : 0.22),
+              width: 1.1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.10 : 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.15 : 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 38,
-              height: 34,
-              child: Lottie.asset(
-                'assets/lottie/cat_mascot.json',
-                fit: BoxFit.contain,
-                repeat: true,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF34D399).withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Meow',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF34D399),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Left Column: Greetings, Interactive Speech Bubble & Action Chip
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Mascot Header Row
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF34D399),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF34D399).withValues(alpha: 0.6),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Kucing Cuan',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.18 : 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Elus aku! 🐱💖',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF34D399),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Interactive Speech Bubble
+                    InkWell(
+                      onTap: _triggerHappyPet,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: (isDark ? const Color(0xFF1B2236) : const Color(0xFFF1F5F9))
+                              .withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Text(
+                          '"${_catCheers[_cheerIndex]}"',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                            color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Bottom info & tips button
+                    InkWell(
+                      onTap: () => _showTipsModal(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline_rounded,
+                            size: 13,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Lihat Tips Keuangan ▾',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+
+              // Right Column: Interactive Cozy Pet Arena (Large ~118px)
+              GestureDetector(
+                onTap: _triggerHappyPet,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 118,
+                  height: 96,
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([_actionController, _idleBobController]),
+                    builder: (context, _) {
+                      double translateY = 0.0;
+                      double rotate = 0.0;
+                      double scaleX = 1.0;
+                      double scaleY = 1.0;
+                      double particleProgress = 0.0;
+                      bool showParticles = false;
+
+                      if (_actionController.isAnimating) {
+                        final t = _actionController.value;
+                        showParticles = true;
+                        particleProgress = t;
+
+                        if (t < 0.20) {
+                          // Phase 1: Anticipation / soft squish down when petted
+                          final p = t / 0.20;
+                          translateY = p * 4.0;
+                          scaleX = 1.0 + p * 0.10;
+                          scaleY = 1.0 - p * 0.10;
+                        } else if (t < 0.65) {
+                          // Phase 2: Joyful cute hop upward with kitten wiggle!
+                          final p = (t - 0.20) / 0.45;
+                          final hop = math.sin(p * math.pi);
+                          translateY = -18.0 * hop;
+                          // Wiggle ears and body playfully left & right
+                          rotate = math.sin(p * math.pi * 3) * 0.08;
+                          scaleX = 1.0 - hop * 0.06;
+                          scaleY = 1.0 + hop * 0.08;
+                        } else {
+                          // Phase 3: Gentle soft landing bounce
+                          final p = (t - 0.65) / 0.35;
+                          final bounce = math.sin(p * math.pi);
+                          translateY = 0.0;
+                          rotate = 0.0;
+                          scaleX = 1.0 + bounce * 0.10 * (1.0 - p);
+                          scaleY = 1.0 - bounce * 0.10 * (1.0 - p);
+                        }
+                      } else {
+                        // Gentle soothing idle breathing bob
+                        translateY = math.sin(_idleBobController.value * math.pi) * 2.2;
+                      }
+
+                      return Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Cozy Ground Shadow underneath the cat
+                          Positioned(
+                            bottom: 8,
+                            child: Transform.scale(
+                              scaleX: 1.0 - (translateY < 0 ? (-translateY / 18.0) * 0.35 : 0.0),
+                              scaleY: 0.7,
+                              child: Container(
+                                width: 64,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(
+                                    alpha: 0.28 - (translateY < 0 ? (-translateY / 18.0) * 0.15 : 0.0),
+                                  ),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Floating Love & Sparkle Particles on Pet
+                          if (showParticles) ...[
+                            // Left heart floating up & left
+                            Positioned(
+                              top: 14 - (particleProgress * 32),
+                              left: 20 - (particleProgress * 12),
+                              child: Opacity(
+                                opacity: (1.0 - particleProgress).clamp(0.0, 1.0),
+                                child: Transform.scale(
+                                  scale: 0.6 + particleProgress * 0.6,
+                                  child: const Text('💖', style: TextStyle(fontSize: 14)),
+                                ),
+                              ),
+                            ),
+                            // Center star sparkle floating straight up higher
+                            Positioned(
+                              top: 6 - (particleProgress * 38),
+                              left: 48,
+                              child: Opacity(
+                                opacity: (1.0 - particleProgress).clamp(0.0, 1.0),
+                                child: Transform.rotate(
+                                  angle: particleProgress * math.pi,
+                                  child: Transform.scale(
+                                    scale: 0.7 + particleProgress * 0.5,
+                                    child: const Text('✨', style: TextStyle(fontSize: 16)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Right paw floating up & right
+                            Positioned(
+                              top: 16 - (particleProgress * 28),
+                              right: 18 - (particleProgress * 10),
+                              child: Opacity(
+                                opacity: (1.0 - particleProgress).clamp(0.0, 1.0),
+                                child: Transform.scale(
+                                  scale: 0.6 + particleProgress * 0.5,
+                                  child: const Text('🐾', style: TextStyle(fontSize: 13)),
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          // The Cat Mascot (Large 112px x 80px, aspect 1.4:1)
+                          Transform.translate(
+                            offset: Offset(0.0, translateY),
+                            child: Transform.rotate(
+                              angle: rotate,
+                              child: Transform.scale(
+                                scaleX: scaleX,
+                                scaleY: scaleY,
+                                child: SizedBox(
+                                  width: 112,
+                                  height: 80,
+                                  child: Lottie.asset(
+                                    'assets/lottie/cat_mascot.json',
+                                    fit: BoxFit.contain,
+                                    repeat: true,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

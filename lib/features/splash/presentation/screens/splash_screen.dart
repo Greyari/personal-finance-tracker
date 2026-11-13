@@ -26,32 +26,39 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final AnimationController _ambientController;
   late final AnimationController _haloController;
   late final AnimationController _sheenController;
+  late final AnimationController _progressController;
   bool _navigated = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Ambient breathing loop for background light orbs (3.2s)
+    // Ambient breathing loop for background light orbs (3.6s)
     _ambientController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: const Duration(milliseconds: 3600),
     )..repeat(reverse: true);
 
-    // Continuous slow celestial rotation for the astronomical halo ring (14s)
+    // Continuous celestial rotation for the astronomical halo ring (14s)
     _haloController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 14000),
     )..repeat();
 
-    // Sheen sweep across the luxury plaque & icon
+    // Sheen sweep across the luxury plaque & icon (extended 2.4s)
     _sheenController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1900),
+      duration: const Duration(milliseconds: 2400),
     )..forward();
 
-    // Auto navigate to AuthGate after 2.3 seconds
-    Future.delayed(const Duration(milliseconds: 2300), () {
+    // Smooth luxury loading progress (3.8s)
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3800),
+    )..forward();
+
+    // Auto navigate to AuthGate after 3.9 seconds (longer, elegant load)
+    Future.delayed(const Duration(milliseconds: 3900), () {
       _proceed();
     });
   }
@@ -83,6 +90,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _ambientController.dispose();
     _haloController.dispose();
     _sheenController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
@@ -242,51 +250,46 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                     const Spacer(flex: 3),
 
-                    // Minimalist Frosted Capsule Status Indicator
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7.5),
-                      decoration: BoxDecoration(
-                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.10),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF34D399),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0xFF34D399),
-                                  blurRadius: 8,
-                                  spreadRadius: 1,
+                    // Minimalist Luxury Hairline Loading Indicator (Pure elegance, no text)
+                    AnimatedBuilder(
+                      animation: _progressController,
+                      builder: (context, _) {
+                        return Container(
+                          width: 140,
+                          height: 2.5,
+                          decoration: BoxDecoration(
+                            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              width: 140 * Curves.easeInOutCubic.transform(_progressController.value),
+                              height: 2.5,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF059669),
+                                    Color(0xFF34D399),
+                                    Color(0xFFFFFFFF),
+                                  ],
                                 ),
-                              ],
+                                borderRadius: BorderRadius.circular(999),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF34D399).withValues(alpha: 0.6),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Menyiapkan lemari finansial...',
-                            style: GoogleFonts.inter(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     )
                         .animate()
-                        .fadeIn(delay: 550.ms, duration: 500.ms),
+                        .fadeIn(delay: 500.ms, duration: 600.ms),
 
                     const SizedBox(height: 38),
                   ],
