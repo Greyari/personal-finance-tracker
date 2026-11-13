@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/fcm_service.dart';
 import '../../../auth/data/models/app_user_model.dart';
 import '../models/chat_model.dart';
 
@@ -135,6 +136,15 @@ class ChatRepository {
     });
 
     await batch.commit();
+
+    // Trigger FCM Push to partner asynchronously
+    _sendPartnerPushNotification(
+      partnerId: partnerId,
+      senderName: senderName,
+      messageText: text.trim(),
+      chatId: chatId,
+      senderId: senderId,
+    );
   }
 
   /// Sends a photo message and updates parent chat metadata atomically.
@@ -174,6 +184,41 @@ class ChatRepository {
     });
 
     await batch.commit();
+
+    // Trigger FCM Push to partner asynchronously
+    _sendPartnerPushNotification(
+      partnerId: partnerId,
+      senderName: senderName,
+      messageText: cleanCaption.isNotEmpty ? '📷 $cleanCaption' : '📷 Mengirim foto',
+      chatId: chatId,
+      senderId: senderId,
+    );
+  }
+
+  /// Sends FCM push notification to partner device token if available.
+  Future<void> _sendPartnerPushNotification({
+    required String partnerId,
+    required String senderName,
+    required String messageText,
+    required String chatId,
+    required String senderId,
+  }) async {
+    try {
+      final doc = await _firestore.collection(FirestoreCollections.userDirectory).doc(partnerId).get();
+      if (!doc.exists || doc.data() == null) return;
+      final fcmToken = doc.data()?['fcmToken'] as String?;
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await FcmService().sendPushNotification(
+          targetFcmToken: fcmToken,
+          senderName: senderName,
+          messageText: messageText,
+          chatId: chatId,
+          senderId: senderId,
+        );
+      }
+    } catch (_) {
+      // Ignore background push error
+    }
   }
 
   /// Adds, switches, or removes a reaction emoji on a message (WhatsApp style).

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/services/fcm_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/models/chat_model.dart';
@@ -10,12 +11,13 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 /// Automatically keeps the user's public directory document up to date
-/// so other users can search them by email.
+/// so other users can search them by email, and registers device FCM token.
 final userDirectorySyncProvider = FutureProvider<void>((ref) async {
   try {
     final userProfile = ref.watch(userProfileProvider).value;
     if (userProfile != null) {
       await ref.read(chatRepositoryProvider).syncUserDirectory(userProfile);
+      await FcmService().saveUserFcmToken(userProfile.userId);
     }
   } catch (_) {}
 });

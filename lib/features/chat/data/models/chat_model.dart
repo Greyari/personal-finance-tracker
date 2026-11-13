@@ -6,12 +6,14 @@ class ChatParticipantInfo {
   final String displayName;
   final String email;
   final String? photoUrl;
+  final String? fcmToken;
 
   const ChatParticipantInfo({
     required this.userId,
     required this.displayName,
     required this.email,
     this.photoUrl,
+    this.fcmToken,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class ChatParticipantInfo {
       'displayName': displayName,
       'email': email,
       'photoUrl': photoUrl,
+      if (fcmToken != null) 'fcmToken': fcmToken,
     };
   }
 
@@ -29,6 +32,7 @@ class ChatParticipantInfo {
       displayName: map['displayName'] as String? ?? 'Pengguna',
       email: map['email'] as String? ?? '',
       photoUrl: map['photoUrl'] as String?,
+      fcmToken: map['fcmToken'] as String?,
     );
   }
 }
