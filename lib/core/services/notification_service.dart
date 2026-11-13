@@ -68,7 +68,7 @@ class NotificationService {
 
     try {
       await _notificationsPlugin.initialize(
-        settings: initSettings,
+        initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           debugPrint(
               '[NotificationService] Notification tapped: ${details.payload}');
@@ -97,7 +97,7 @@ class NotificationService {
       }
 
       _isInitialized = true;
-      debugPrint('[NotificationService] Ready');
+      debugPrint('[NotificationService] Ready (v18.0.1)');
     } catch (e) {
       debugPrint('[NotificationService] Initialize error: $e');
     }
@@ -169,10 +169,10 @@ class NotificationService {
     await init();
     try {
       await _notificationsPlugin.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: _getPlatformDetails(),
+        id,
+        title,
+        body,
+        _getPlatformDetails(),
         payload: payload,
       );
       debugPrint('[NotificationService] Instant notification shown: $title');
@@ -224,12 +224,14 @@ class NotificationService {
       }
 
       await _notificationsPlugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        notificationDetails: _getPlatformDetails(),
+        id,
+        title,
+        body,
+        scheduledDate,
+        _getPlatformDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents:
             isDaily ? DateTimeComponents.time : null,
       );
@@ -253,12 +255,14 @@ class NotificationService {
           fallbackDate = fallbackDate.add(const Duration(days: 1));
         }
         await _notificationsPlugin.zonedSchedule(
-          id: id,
-          title: title,
-          body: body,
-          scheduledDate: fallbackDate,
-          notificationDetails: _getPlatformDetails(),
+          id,
+          title,
+          body,
+          fallbackDate,
+          _getPlatformDetails(),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents:
               isDaily ? DateTimeComponents.time : null,
         );
@@ -271,7 +275,7 @@ class NotificationService {
   /// Cancel a specific notification by ID
   Future<void> cancelNotification(int id) async {
     try {
-      await _notificationsPlugin.cancel(id: id);
+      await _notificationsPlugin.cancel(id);
       debugPrint('[NotificationService] Cancelled notification ID $id');
     } catch (e) {
       debugPrint('[NotificationService] cancelNotification error: $e');
