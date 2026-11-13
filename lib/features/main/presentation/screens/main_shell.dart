@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../budgets/presentation/screens/budget_list_screen.dart';
+import '../../../chat/presentation/providers/chat_providers.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../goals/presentation/screens/goals_shell_screen.dart';
 import '../../../recurring/presentation/providers/recurring_providers.dart';
@@ -29,6 +30,7 @@ class MainShell extends ConsumerWidget {
     // Silently checks once per app session whether this month's active
     // recurring transactions have already been generated.
     ref.watch(recurringGenerationProvider);
+    ref.watch(chatNotificationWatcherProvider);
     final index = ref.watch(mainNavIndexProvider);
 
     return GlassScaffold(

@@ -1129,58 +1129,68 @@ class _GlassSliverRefreshControlState extends State<GlassSliverRefreshControl> {
           }
         }
 
-        if (pulledExtent <= 6) return const SizedBox.shrink();
+        if (pulledExtent <= 18) return const SizedBox.shrink();
 
         final bool isRefreshing = refreshState == RefreshIndicatorMode.refresh;
         final bool isArmed = refreshState == RefreshIndicatorMode.armed;
         final double progress = (pulledExtent / refreshTriggerPullDistance).clamp(0.0, 1.0);
 
-        return Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.16)
-                  : Colors.white.withValues(alpha: 0.70),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.8),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.30)
-                      : const Color(0x0E0F172A),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                isRefreshing
-                    ? CupertinoActivityIndicator(radius: 9, color: activeColor)
-                    : CupertinoActivityIndicator.partiallyRevealed(
-                        radius: 9,
-                        color: activeColor,
-                        progress: progress,
+        return ClipRect(
+          child: OverflowBox(
+            minHeight: 0,
+            maxHeight: refreshIndicatorExtent > 0 ? refreshIndicatorExtent + 20 : 72.0,
+            alignment: Alignment.center,
+            child: Center(
+              child: Opacity(
+                opacity: isRefreshing ? 1.0 : progress.clamp(0.0, 1.0),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.16)
+                        : Colors.white.withValues(alpha: 0.70),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: isDark ? 0.35 : 0.8),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.30)
+                            : const Color(0x0E0F172A),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
                       ),
-                const SizedBox(width: 8),
-                Text(
-                  isRefreshing
-                      ? 'Memperbarui data...'
-                      : (isArmed ? 'Lepas untuk memperbarui' : 'Tarik ke bawah'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                    decoration: TextDecoration.none,
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      isRefreshing
+                          ? CupertinoActivityIndicator(radius: 9, color: activeColor)
+                          : CupertinoActivityIndicator.partiallyRevealed(
+                              radius: 9,
+                              color: activeColor,
+                              progress: progress,
+                            ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isRefreshing
+                            ? 'Memperbarui data...'
+                            : (isArmed ? 'Lepas untuk memperbarui' : 'Tarik ke bawah'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );

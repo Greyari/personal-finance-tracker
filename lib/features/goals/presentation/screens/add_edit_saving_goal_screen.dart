@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,53 +63,203 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
   }
 
   void _showCoverOptions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _CoverOption(
-                icon: Icons.photo_library_outlined,
-                label: 'Pilih dari Galeri',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickCover(ImageSource.gallery);
-                },
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF131826) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
               ),
-              _CoverOption(
-                icon: Icons.photo_camera_outlined,
-                label: 'Ambil dengan Kamera',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickCover(ImageSource.camera);
-                },
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pilih Foto Cover Target',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Tentukan foto visual untuk target tabunganmu',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    tileColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.photo_library_rounded, color: isDark ? Colors.white : Colors.black),
+                    ),
+                    title: Text(
+                      'Pilih dari Galeri',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Gunakan foto impian dari memori HP kamu',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickCover(ImageSource.gallery);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    tileColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.camera_alt_rounded, color: isDark ? Colors.white : Colors.black),
+                    ),
+                    title: Text(
+                      'Ambil dengan Kamera',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Potret foto target impianmu secara langsung',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickCover(ImageSource.camera);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    tileColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF34D399).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF34D399)),
+                    ),
+                    title: Text(
+                      'Pakai Gambar Contoh',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Gunakan ilustrasi mobil impian 3D default',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      setState(() => _coverPath = 'assets/images/goals/dream_car.png');
+                    },
+                  ),
+                  if (_coverPath != null) ...[
+                    const SizedBox(height: 10),
+                    ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      tileColor: (isDark ? AppColors.expenseDark : AppColors.expenseLight)
+                          .withValues(alpha: isDark ? 0.10 : 0.06),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isDark ? AppColors.expenseDark : AppColors.expenseLight)
+                              .withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                        ),
+                      ),
+                      title: Text(
+                        'Hapus Foto Cover',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                          color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Kembalikan ke tampilan cover minimalis',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        setState(() => _coverPath = null);
+                      },
+                    ),
+                  ],
+                ],
               ),
-              _CoverOption(
-                icon: Icons.auto_awesome_outlined,
-                label: 'Pakai gambar contoh',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _coverPath = 'assets/images/goals/dream_car.png');
-                },
-              ),
-              if (_coverPath != null)
-                _CoverOption(
-                  icon: Icons.delete_outline_rounded,
-                  label: 'Hapus foto',
-                  color: AppColors.expenseDark,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    setState(() => _coverPath = null);
-                  },
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -255,33 +407,6 @@ class _AddEditSavingGoalScreenState extends ConsumerState<AddEditSavingGoalScree
           ),
         ),
       ),
-    );
-  }
-}
-
-
-class _CoverOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? color;
-
-  const _CoverOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppColors.isDark(context);
-    final c = color ?? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
-    final iconColor = color ?? (isDark ? AppColors.primaryDark : AppColors.primaryLight);
-    return ListTile(
-      leading: Icon(icon, color: iconColor),
-      title: Text(label, style: GoogleFonts.inter(fontSize: 15, color: c)),
-      onTap: onTap,
     );
   }
 }

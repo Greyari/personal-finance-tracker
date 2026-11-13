@@ -181,6 +181,46 @@ class NotificationService {
     }
   }
 
+  /// Show an instant WhatsApp-like chat message notification
+  Future<void> showChatNotification({
+    required int id,
+    required String senderName,
+    required String messageText,
+    String? chatId,
+  }) async {
+    await init();
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'chat_messages_channel',
+        'Pesan Obrolan',
+        channelDescription: 'Notifikasi pesan obrolan baru dari pasangan',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        icon: '@mipmap/ic_launcher',
+        category: AndroidNotificationCategory.message,
+        visibility: NotificationVisibility.public,
+      );
+
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      await _notificationsPlugin.show(
+        id,
+        senderName,
+        messageText,
+        const NotificationDetails(android: androidDetails, iOS: darwinDetails),
+        payload: chatId,
+      );
+    } catch (e) {
+      debugPrint('[NotificationService] showChatNotification error: $e');
+    }
+  }
+
   /// Schedule a reminder for a Sticky Note
   Future<void> scheduleNoteReminder({
     required int id,

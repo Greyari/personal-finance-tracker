@@ -27,6 +27,8 @@ import '../../../reports/presentation/screens/monthly_report_screen.dart';
 import '../../../transactions/data/models/transaction_model.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../../transactions/presentation/screens/add_edit_transaction_screen.dart';
+import '../../../chat/presentation/providers/chat_providers.dart';
+import '../../../chat/presentation/screens/chat_list_screen.dart';
 import '../providers/dashboard_providers.dart';
 import '../providers/financial_health_provider.dart';
 import 'financial_health_screen.dart';
@@ -44,6 +46,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
+    ref.watch(userDirectorySyncProvider);
     final profileAsync = ref.watch(userProfileProvider);
     final transactionsAsync = ref.watch(transactionsForMonthProvider);
     final categoriesAsync = ref.watch(categoriesProvider(null));
@@ -182,9 +185,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      const _DashboardChatButton(),
                     ],
                   ),
-                  loading: () => const SizedBox.shrink(),
+                  loading: () => Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceHighDark : AppColors.surfaceHighLight,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceHighDark : AppColors.surfaceHighLight,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: 180,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceHighDark : AppColors.surfaceHighLight,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const _DashboardChatButton(),
+                    ],
+                  ),
                   error: (_, __) => const SizedBox.shrink(),
                 ).animate().fadeIn(duration: 300.ms),
                 const SizedBox(height: 12),
@@ -2059,4 +2102,96 @@ class _InteractiveCatHeroCardState extends State<_InteractiveCatHeroCard>
     );
   }
 }
+
+class _DashboardChatButton extends ConsumerWidget {
+  const _DashboardChatButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = AppColors.isDark(context);
+    final unreadCount = ref.watch(totalUnreadChatCountProvider);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.surfaceHighDark.withValues(alpha: 0.75)
+                : AppColors.surfaceHighLight.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 20,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  top: -3,
+                  right: -3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.incomeDark : AppColors.incomeLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isDark ? AppColors.incomeDark : AppColors.incomeLight)
+                              .withValues(alpha: 0.5),
+                          blurRadius: 6,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 

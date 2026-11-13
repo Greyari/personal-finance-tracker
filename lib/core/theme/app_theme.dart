@@ -51,6 +51,8 @@ class AppColors {
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color surfaceDark = Color(0xFF131826);
   static const Color surfaceHigh = Color(0xFF1B2236);
+  static const Color surfaceHighLight = Color(0xFFF1F5F9);
+  static const Color surfaceHighDark = Color(0xFF1B2236);
 
   // Text on accent
   static const Color onAccent = Color(0xFF0A0D14);

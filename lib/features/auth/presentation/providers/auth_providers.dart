@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../categories/data/repositories/category_repository.dart';
 import '../../../recurring/data/repositories/recurring_transaction_repository.dart';
 import '../../data/models/app_user_model.dart';
@@ -19,6 +21,11 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 /// This is what AuthGate in main.dart watches to decide Login vs Home.
 final authStateProvider = StreamProvider<User?>((ref) {
   return ref.watch(authRepositoryProvider).authStateChanges;
+});
+
+/// Exposes the current signed-in Firebase user (null if signed out).
+final currentUserProvider = Provider<User?>((ref) {
+  return ref.watch(authStateProvider).value;
 });
 
 /// Streams the current user's Firestore profile document.
@@ -70,13 +77,26 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
           await _authRepository.register(email: email, password: password);
       // Create the Firestore profile document right after the auth
       // account is created, so the two never drift out of sync.
-      await _userRepository.createProfile(
-        AppUserModel(
-          userId: user.uid,
-          email: email.trim(),
-          displayName: displayName.trim(),
-        ),
+      final newAppUser = AppUserModel(
+        userId: user.uid,
+        email: email.trim(),
+        displayName: displayName.trim(),
       );
+      await _userRepository.createProfile(newAppUser);
+
+      // Automatically register user in user_directory for chat discovery
+      try {
+        await FirebaseFirestore.instance
+            .collection(FirestoreCollections.userDirectory)
+            .doc(user.uid)
+            .set({
+          'userId': user.uid,
+          'email': email.trim().toLowerCase(),
+          'displayName': displayName.trim(),
+          'photoUrl': null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
       // Give every new user a starting set of categories (Section 6 of
       // the spec) so Transactions isn't empty/unusable on first login.
       // Guarded internally against double-seeding, so it's safe even if

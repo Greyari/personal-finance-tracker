@@ -17,6 +17,13 @@ class FirestoreCollections {
   static const String categories = 'categories';
   static const String recurringTransactions = 'recurring_transactions';
 
+  /// Top-level directory for user discovery (email, displayName, photoUrl)
+  static const String userDirectory = 'user_directory';
+
+  /// Top-level collections for direct 1-on-1 chats and real-time messaging
+  static const String chats = 'chats';
+  static const String messages = 'messages';
+
   /// Subcollection under users/{userId}/saving_goals/{goalId}
   static const String contributions = 'contributions';
 
