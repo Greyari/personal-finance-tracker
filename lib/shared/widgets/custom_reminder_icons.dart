@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Unique handcrafted vector icon for the Floating Pin Note Button.
-/// Features a luxury faceted crystal glass head, metallic needle, and glowing core.
+/// Human-crafted minimalist luxury stationery icon for Notes.
+/// Designed with Apple / Linear aesthetic: a sleek rounded memo note sheet
+/// with an elegant dog-ear folded corner, clean content lines, and a subtle glowing accent.
 class CustomGlassPinIcon extends StatelessWidget {
   final double size;
   final Color? color;
@@ -27,7 +28,7 @@ class CustomGlassPinIcon extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _GlassPinPainter(
+        painter: _LuxuryNotePainter(
           primaryColor: primary,
           accentColor: accent,
         ),
@@ -36,11 +37,11 @@ class CustomGlassPinIcon extends StatelessWidget {
   }
 }
 
-class _GlassPinPainter extends CustomPainter {
+class _LuxuryNotePainter extends CustomPainter {
   final Color primaryColor;
   final Color accentColor;
 
-  const _GlassPinPainter({
+  const _LuxuryNotePainter({
     required this.primaryColor,
     required this.accentColor,
   });
@@ -50,85 +51,117 @@ class _GlassPinPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Needle shaft (slanted bottom-left to center-right)
-    final needlePaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.65)
-      ..strokeWidth = w * 0.09
+    // Proportions for a luxury rounded memo sheet
+    final left = w * 0.16;
+    final top = h * 0.12;
+    final right = w * 0.84;
+    final bottom = h * 0.88;
+    final cornerRadius = w * 0.12;
+    final foldSize = w * 0.24;
+
+    // Body Path with folded top-right corner
+    final bodyPath = Path()
+      ..moveTo(left + cornerRadius, top)
+      ..lineTo(right - foldSize, top)
+      ..lineTo(right, top + foldSize)
+      ..lineTo(right, bottom - cornerRadius)
+      ..arcToPoint(
+        Offset(right - cornerRadius, bottom),
+        radius: Radius.circular(cornerRadius),
+      )
+      ..lineTo(left + cornerRadius, bottom)
+      ..arcToPoint(
+        Offset(left, bottom - cornerRadius),
+        radius: Radius.circular(cornerRadius),
+      )
+      ..lineTo(left, top + cornerRadius)
+      ..arcToPoint(
+        Offset(left + cornerRadius, top),
+        radius: Radius.circular(cornerRadius),
+      )
+      ..close();
+
+    // Subtle translucent glass fill
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          primaryColor.withValues(alpha: 0.20),
+          primaryColor.withValues(alpha: 0.06),
+        ],
+      ).createShader(Rect.fromLTWH(left, top, right - left, bottom - top))
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(bodyPath, fillPaint);
+
+    // Clean outer border stroke
+    final strokePaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = math.max(1.4, w * 0.08)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(bodyPath, strokePaint);
+
+    // Top-Right Dog-Ear Fold Flap
+    final foldPath = Path()
+      ..moveTo(right - foldSize, top)
+      ..lineTo(right - foldSize, top + foldSize)
+      ..lineTo(right, top + foldSize);
+    canvas.drawPath(foldPath, strokePaint);
+
+    // Fold inner subtle fill
+    final foldFill = Paint()
+      ..color = primaryColor.withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    final foldPoly = Path()
+      ..moveTo(right - foldSize, top)
+      ..lineTo(right - foldSize, top + foldSize)
+      ..lineTo(right, top + foldSize)
+      ..close();
+    canvas.drawPath(foldPoly, foldFill);
+
+    // Clean Minimalist Note Content Lines (embossed stationery lines)
+    final linePaint = Paint()
+      ..color = primaryColor.withValues(alpha: 0.75)
+      ..strokeWidth = math.max(1.3, w * 0.075)
       ..strokeCap = StrokeCap.round;
 
-    final needlePath = Path()
-      ..moveTo(w * 0.22, h * 0.88)
-      ..lineTo(w * 0.48, h * 0.54);
-    canvas.drawPath(needlePath, needlePathPaint(needlePaint, w));
+    // Line 1 (Upper short header line)
+    canvas.drawLine(
+      Offset(w * 0.30, h * 0.40),
+      Offset(w * 0.54, h * 0.40),
+      linePaint,
+    );
 
-    // Faceted Crystal Pin Head
-    final center = Offset(w * 0.60, h * 0.38);
-    final radius = w * 0.28;
+    // Line 2 (Middle full line)
+    canvas.drawLine(
+      Offset(w * 0.30, h * 0.55),
+      Offset(w * 0.70, h * 0.55),
+      linePaint,
+    );
 
-    // Outer crystal rim (faceted diamond / octagonal shield)
-    final headPath = Path();
-    const sides = 6;
-    for (int i = 0; i < sides; i++) {
-      final angle = (i * 2 * math.pi / sides) - (math.pi / 6);
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        headPath.moveTo(x, y);
-      } else {
-        headPath.lineTo(x, y);
-      }
-    }
-    headPath.close();
+    // Line 3 (Lower medium line)
+    canvas.drawLine(
+      Offset(w * 0.30, h * 0.70),
+      Offset(w * 0.60, h * 0.70),
+      linePaint,
+    );
 
-    // Translucent glass fill
-    final glassFillPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.3, -0.4),
-        radius: 0.9,
-        colors: [
-          primaryColor.withValues(alpha: 0.35),
-          primaryColor.withValues(alpha: 0.10),
-        ],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(headPath, glassFillPaint);
-
-    // Crystal outer border
-    final glassBorderPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.85)
-      ..strokeWidth = w * 0.065
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(headPath, glassBorderPaint);
-
-    // Glowing Emerald Core Jewel
-    final jewelPaint = Paint()
+    // Accent Emerald Jewel Bookmark / Seal Dot at bottom-right
+    final dotPaint = Paint()
       ..color = accentColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius * 0.42, jewelPaint);
-
-    // Specular highlight gleam on the core
-    final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.90)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(center.dx - radius * 0.12, center.dy - radius * 0.12),
-      radius * 0.14,
-      highlightPaint,
-    );
-  }
-
-  Paint needlePathPaint(Paint base, double width) {
-    return base..strokeWidth = width * 0.085;
+    canvas.drawCircle(Offset(w * 0.70, h * 0.70), math.max(1.8, w * 0.07), dotPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _GlassPinPainter oldDelegate) =>
+  bool shouldRepaint(covariant _LuxuryNotePainter oldDelegate) =>
       oldDelegate.primaryColor != primaryColor ||
       oldDelegate.accentColor != accentColor;
 }
 
-/// Unique handcrafted vector icon for Reminder Notification Bell.
-/// Features sculpted acoustic arches, glowing clapper, and soundwave ripples.
+/// Natural luxury notification bell icon with Apple-style soft curves and soundwaves.
 class CustomLuxuryBellIcon extends StatelessWidget {
   final double size;
   final Color? color;
@@ -181,58 +214,55 @@ class _LuxuryBellPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Top hanger loop
+    // Top loop
     final loopPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.8)
+      ..color = primaryColor
       ..strokeWidth = w * 0.08
       ..style = PaintingStyle.stroke;
     canvas.drawArc(
-      Rect.fromCircle(center: Offset(w * 0.5, h * 0.20), radius: w * 0.10),
+      Rect.fromCircle(center: Offset(w * 0.5, h * 0.18), radius: w * 0.08),
       math.pi,
       math.pi,
       false,
       loopPaint,
     );
 
-    // Bell Body Path
+    // Bell dome path (smooth Apple-style bell curve)
     final bellPath = Path();
     bellPath.moveTo(w * 0.38, h * 0.22);
-    // Left curve down to flared lip
     bellPath.cubicTo(
       w * 0.38,
-      h * 0.42,
+      h * 0.40,
+      w * 0.22,
+      h * 0.58,
       w * 0.20,
-      h * 0.62,
-      w * 0.18,
-      h * 0.72,
+      h * 0.70,
     );
-    // Bottom lip curve
-    bellPath.quadraticBezierTo(w * 0.5, h * 0.76, w * 0.82, h * 0.72);
-    // Right curve up
+    bellPath.quadraticBezierTo(w * 0.5, h * 0.74, w * 0.80, h * 0.70);
     bellPath.cubicTo(
-      w * 0.80,
-      h * 0.62,
+      w * 0.78,
+      h * 0.58,
       w * 0.62,
-      h * 0.42,
+      h * 0.40,
       w * 0.62,
       h * 0.22,
     );
     bellPath.close();
 
-    // Subtle glass body fill
+    // Translucent glass fill
     final fillPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          primaryColor.withValues(alpha: 0.30),
+          primaryColor.withValues(alpha: 0.25),
           primaryColor.withValues(alpha: 0.08),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h))
       ..style = PaintingStyle.fill;
     canvas.drawPath(bellPath, fillPaint);
 
-    // Bell stroke outline
+    // Bell stroke
     final strokePaint = Paint()
       ..color = primaryColor
       ..strokeWidth = w * 0.08
@@ -241,45 +271,43 @@ class _LuxuryBellPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     canvas.drawPath(bellPath, strokePaint);
 
-    // Flared horizontal lip bar
-    final lipPaint = Paint()
+    // Rim bar
+    final rimPaint = Paint()
       ..color = primaryColor
       ..strokeWidth = w * 0.075
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
-      Offset(w * 0.16, h * 0.73),
-      Offset(w * 0.84, h * 0.73),
-      lipPaint,
+      Offset(w * 0.18, h * 0.71),
+      Offset(w * 0.82, h * 0.71),
+      rimPaint,
     );
 
-    // Clapper pendulum (glowing accent jewel)
+    // Clapper pendulum
     final clapperPaint = Paint()
       ..color = accentColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(w * 0.5, h * 0.84), w * 0.10, clapperPaint);
+    canvas.drawCircle(Offset(w * 0.5, h * 0.82), w * 0.09, clapperPaint);
 
-    // Acoustic soundwave arcs if enabled
+    // Subtle acoustic ripple if active
     if (hasRipples) {
       final ripplePaint = Paint()
-        ..color = accentColor.withValues(alpha: 0.65)
+        ..color = accentColor.withValues(alpha: 0.6)
         ..strokeWidth = w * 0.065
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke;
 
-      // Left ripple arc
       canvas.drawArc(
-        Rect.fromCircle(center: Offset(w * 0.5, h * 0.46), radius: w * 0.42),
+        Rect.fromCircle(center: Offset(w * 0.5, h * 0.46), radius: w * 0.40),
         math.pi * 0.90,
-        math.pi * 0.35,
+        math.pi * 0.32,
         false,
         ripplePaint,
       );
 
-      // Right ripple arc
       canvas.drawArc(
-        Rect.fromCircle(center: Offset(w * 0.5, h * 0.46), radius: w * 0.42),
-        -math.pi * 0.25,
-        math.pi * 0.35,
+        Rect.fromCircle(center: Offset(w * 0.5, h * 0.46), radius: w * 0.40),
+        -math.pi * 0.22,
+        math.pi * 0.32,
         false,
         ripplePaint,
       );
@@ -293,8 +321,7 @@ class _LuxuryBellPainter extends CustomPainter {
       oldDelegate.hasRipples != hasRipples;
 }
 
-/// Unique handcrafted vector icon for "Setiap Hari" (Daily recurring repeat).
-/// Features dual orbital arrows forming an infinity loop around a central time node.
+/// Natural luxury circular repeat icon for "Setiap Hari".
 class CustomDailyRepeatIcon extends StatelessWidget {
   final double size;
   final Color? color;
@@ -332,7 +359,7 @@ class _DailyRepeatPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final center = Offset(w * 0.5, h * 0.5);
-    final radius = w * 0.36;
+    final radius = w * 0.35;
 
     final arcPaint = Paint()
       ..color = color
@@ -372,11 +399,11 @@ class _DailyRepeatPainter extends CustomPainter {
       ..lineTo(w * 0.24, h * 0.64);
     canvas.drawPath(arrow2, arcPaint);
 
-    // Center time dot
+    // Center dot
     final dotPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, w * 0.09, dotPaint);
+    canvas.drawCircle(center, w * 0.08, dotPaint);
   }
 
   @override

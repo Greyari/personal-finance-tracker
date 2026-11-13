@@ -11,6 +11,7 @@ import 'core/theme/theme_provider.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/main/presentation/screens/main_shell.dart';
+import 'features/splash/presentation/screens/splash_screen.dart';
 import 'firebase_options.dart';
 import 'shared/widgets/glass_widgets.dart';
 
@@ -62,7 +63,7 @@ class PersonalFinanceApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }

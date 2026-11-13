@@ -59,12 +59,12 @@ class AppColors {
   static const Color noteYellow = Color(0xFFE2E8F0);
   static const Color noteInk = Color(0xFF0F172A);
 
-  // Glass & Subtle Card Fills
-  static const Color glassFillLight = Color(0xB8FFFFFF);
-  static const Color glassFillDark = Color(0x1AFFFFFF);
+  // Glass & Subtle Card Fills (Balanced luxury glass opacity ~75%)
+  static const Color glassFillLight = Color(0xD0FFFFFF);
+  static const Color glassFillDark = Color(0xB8131826);
 
-  static const Color glassCardLight = Color(0xD9FFFFFF);
-  static const Color glassCardDark = Color(0x14FFFFFF);
+  static const Color glassCardLight = Color(0xDCFFFFFF);
+  static const Color glassCardDark = Color(0xC4131826);
 
   // Borders
   static const Color glassBorderLight = Color(0x40E2E8F0);

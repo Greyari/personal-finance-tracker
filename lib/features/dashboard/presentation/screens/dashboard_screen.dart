@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/category_icons.dart';
@@ -178,6 +180,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      const _CatMascotBadge(),
                     ],
                   ),
                   loading: () => const SizedBox.shrink(),
@@ -1114,14 +1118,18 @@ class _RecentTransactionsSection extends StatelessWidget {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: 40,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    SizedBox(
+                      width: 76,
+                      height: 60,
+                      child: Lottie.asset(
+                        'assets/lottie/cat_mascot.json',
+                        fit: BoxFit.contain,
+                        repeat: true,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Belum ada transaksi di bulan ini.\nTekan tombol di atas untuk mencatat.',
+                      'Belum ada transaksi di bulan ini.\nTekan tombol di atas untuk mencatat, meow! 🐾',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -1562,6 +1570,177 @@ class _LegendDot extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Interactive Luxury Animated Cat Companion (Lottie Mascot)
+class _CatMascotBadge extends StatefulWidget {
+  const _CatMascotBadge();
+
+  @override
+  State<_CatMascotBadge> createState() => _CatMascotBadgeState();
+}
+
+class _CatMascotBadgeState extends State<_CatMascotBadge> {
+  int _tipIndex = 0;
+
+  static const _catTips = [
+    'Meow! Saldomu aman bersamaku 🐾',
+    'Catat pengeluaran kecil, hematnya besar! 💰',
+    'Target tabungan impian makin dekat! ✨',
+    'Kucing Cuan siap jaga brankasmu! 🐱',
+    'Jangan lupa sisihkan dana darurat ya! 🛡️',
+  ];
+
+  void _onTap() {
+    setState(() {
+      _tipIndex = (_tipIndex + 1) % _catTips.length;
+    });
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF131826) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: 120,
+                    height: 96,
+                    child: Lottie.asset(
+                      'assets/lottie/cat_mascot.json',
+                      fit: BoxFit.contain,
+                      repeat: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Kucing Cuan Finansial 🐾',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.16 : 0.10),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF34D399).withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Text(
+                      '"${_catTips[_tipIndex]}"',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Teman pintar pembukuan finansialmu setiap hari.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: _onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1B2236).withValues(alpha: 0.90)
+              : Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.40 : 0.30),
+            width: 1.1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF34D399).withValues(alpha: isDark ? 0.15 : 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 38,
+              height: 34,
+              child: Lottie.asset(
+                'assets/lottie/cat_mascot.json',
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF34D399).withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Meow',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF34D399),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -12,6 +12,71 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_provider.dart';
 import 'custom_reminder_icons.dart';
 
+/// Category metadata for notes
+class NoteCategoryMeta {
+  final String id;
+  final String label;
+  final String icon;
+  final Color colorDark;
+  final Color colorLight;
+
+  const NoteCategoryMeta({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.colorDark,
+    required this.colorLight,
+  });
+
+  Color color(bool isDark) => isDark ? colorDark : colorLight;
+}
+
+const List<NoteCategoryMeta> kNoteCategories = [
+  NoteCategoryMeta(
+    id: 'tagihan',
+    label: 'Tagihan',
+    icon: '💳',
+    colorDark: Color(0xFFF87171),
+    colorLight: Color(0xFFDC2626),
+  ),
+  NoteCategoryMeta(
+    id: 'belanja',
+    label: 'Belanja',
+    icon: '🛒',
+    colorDark: Color(0xFFFBBF24),
+    colorLight: Color(0xFFD97706),
+  ),
+  NoteCategoryMeta(
+    id: 'target',
+    label: 'Target',
+    icon: '🎯',
+    colorDark: Color(0xFF34D399),
+    colorLight: Color(0xFF059669),
+  ),
+  NoteCategoryMeta(
+    id: 'rencana',
+    label: 'Rencana',
+    icon: '💡',
+    colorDark: Color(0xFF38BDF8),
+    colorLight: Color(0xFF0284C7),
+  ),
+  NoteCategoryMeta(
+    id: 'penting',
+    label: 'Penting',
+    icon: '📌',
+    colorDark: Color(0xFFFB7185),
+    colorLight: Color(0xFFE11D48),
+  ),
+];
+
+NoteCategoryMeta? getCategoryMeta(String? id) {
+  if (id == null) return null;
+  for (final c in kNoteCategories) {
+    if (c.id.toLowerCase() == id.toLowerCase()) return c;
+  }
+  return null;
+}
+
 class StickyNote {
   final String id;
   final String text;
@@ -22,6 +87,8 @@ class StickyNote {
   final bool isDaily;
   final bool hasReminder;
   final String? lastNotifiedDate;
+  final String? category;
+  final DateTime? createdAt;
 
   const StickyNote({
     required this.id,
@@ -33,6 +100,8 @@ class StickyNote {
     this.isDaily = false,
     this.hasReminder = false,
     this.lastNotifiedDate,
+    this.category,
+    this.createdAt,
   });
 
   StickyNote copyWith({
@@ -44,7 +113,10 @@ class StickyNote {
     bool? isDaily,
     bool? hasReminder,
     String? lastNotifiedDate,
+    String? category,
+    DateTime? createdAt,
     bool clearReminder = false,
+    bool clearCategory = false,
   }) {
     return StickyNote(
       id: id,
@@ -56,6 +128,8 @@ class StickyNote {
       isDaily: clearReminder ? false : (isDaily ?? this.isDaily),
       hasReminder: clearReminder ? false : (hasReminder ?? this.hasReminder),
       lastNotifiedDate: lastNotifiedDate ?? this.lastNotifiedDate,
+      category: clearCategory ? null : (category ?? this.category),
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -124,6 +198,8 @@ class StickyNote {
         'isDaily': isDaily,
         'hasReminder': hasReminder,
         'lastNotifiedDate': lastNotifiedDate,
+        'category': category,
+        'createdAt': createdAt?.toIso8601String(),
       };
 
   factory StickyNote.fromJson(Map<String, dynamic> j) => StickyNote(
@@ -138,6 +214,10 @@ class StickyNote {
         isDaily: j['isDaily'] as bool? ?? false,
         hasReminder: j['hasReminder'] as bool? ?? false,
         lastNotifiedDate: j['lastNotifiedDate'] as String?,
+        category: j['category'] as String?,
+        createdAt: j['createdAt'] != null
+            ? DateTime.tryParse(j['createdAt'] as String)
+            : null,
       );
 }
 
@@ -145,7 +225,6 @@ const String _kNotesKey = 'sticky_notes_v3';
 const int kNoteMaxLength = 140;
 
 /// State notifier for sticky notes with guaranteed SharedPreferences fallback
-/// so it NEVER fails even if provider overrides haven't fired yet.
 class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
   SharedPreferences? _prefs;
 
@@ -201,23 +280,28 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
     DateTime? reminderDate,
     bool isDaily = false,
     bool hasReminder = false,
+    String? category,
   }) async {
+    final now = DateTime.now();
     final newNote = StickyNote(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: now.microsecondsSinceEpoch.toString(),
       text: text,
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
       reminderDate: reminderDate,
       isDaily: isDaily,
       hasReminder: hasReminder,
+      category: category,
+      createdAt: now,
     );
     await _save([newNote, ..._current]);
 
     if (hasReminder && reminderHour != null && reminderMinute != null) {
       final notifId = newNote.id.hashCode.abs() % 100000000;
+      final catMeta = getCategoryMeta(category);
       await NotificationService().scheduleNoteReminder(
         id: notifId,
-        title: 'Pengingat Catatan',
+        title: catMeta != null ? 'Pengingat ${catMeta.label}' : 'Pengingat Catatan',
         body: text,
         hour: reminderHour,
         minute: reminderMinute,
@@ -231,6 +315,50 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
     await _save([
       for (final n in _current) n.id == id ? n.copyWith(text: text) : n,
     ]);
+  }
+
+  Future<void> updateNoteDetails({
+    required String id,
+    required String text,
+    String? category,
+    int? reminderHour,
+    int? reminderMinute,
+    DateTime? reminderDate,
+    bool isDaily = false,
+    bool hasReminder = false,
+  }) async {
+    await _save([
+      for (final n in _current)
+        n.id == id
+            ? n.copyWith(
+                text: text,
+                category: category,
+                clearCategory: category == null,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
+                reminderDate: reminderDate,
+                isDaily: isDaily,
+                hasReminder: hasReminder,
+                clearReminder: !hasReminder,
+              )
+            : n,
+    ]);
+
+    final notifId = id.hashCode.abs() % 100000000;
+    if (hasReminder && reminderHour != null && reminderMinute != null) {
+      final catMeta = getCategoryMeta(category);
+      await NotificationService().scheduleNoteReminder(
+        id: notifId,
+        title: catMeta != null ? 'Pengingat ${catMeta.label}' : 'Pengingat Catatan',
+        body: text,
+        hour: reminderHour,
+        minute: reminderMinute,
+        date: reminderDate,
+        isDaily: isDaily,
+      );
+    } else {
+      await NotificationService().cancelNotification(notifId);
+    }
   }
 
   Future<void> updateReminder(
@@ -258,9 +386,10 @@ class StickyNotesNotifier extends StateNotifier<AsyncValue<List<StickyNote>>> {
     final notifId = id.hashCode.abs() % 100000000;
     if (hasReminder && hour != null && minute != null) {
       final note = _current.firstWhere((n) => n.id == id, orElse: () => StickyNote(id: id, text: ''));
+      final catMeta = getCategoryMeta(note.category);
       await NotificationService().scheduleNoteReminder(
         id: notifId,
-        title: 'Pengingat Catatan',
+        title: catMeta != null ? 'Pengingat ${catMeta.label}' : 'Pengingat Catatan',
         body: note.text.isNotEmpty ? note.text : 'Catatan Anda memiliki pengingat terjadwal',
         hour: hour,
         minute: minute,
@@ -312,11 +441,19 @@ void showGlassNotesSheet(BuildContext context) {
   );
 }
 
-class _GlassNotesSheetContent extends ConsumerWidget {
+class _GlassNotesSheetContent extends ConsumerStatefulWidget {
   const _GlassNotesSheetContent();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GlassNotesSheetContent> createState() => _GlassNotesSheetContentState();
+}
+
+class _GlassNotesSheetContentState extends ConsumerState<_GlassNotesSheetContent> {
+  String? _selectedCategory;
+  bool _showCompletedSection = true;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
     final notesAsync = ref.watch(stickyNotesProvider);
 
@@ -325,11 +462,11 @@ class _GlassNotesSheetContent extends ConsumerWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.78,
+          height: MediaQuery.of(context).size.height * 0.82,
           decoration: BoxDecoration(
             color: isDark
-                ? AppColors.surfaceHigh.withValues(alpha: 0.94)
-                : Colors.white.withValues(alpha: 0.96),
+                ? AppColors.surfaceHigh.withValues(alpha: 0.95)
+                : Colors.white.withValues(alpha: 0.97),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border.all(
               color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
@@ -350,7 +487,7 @@ class _GlassNotesSheetContent extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Header with Custom Handcrafted Glass Pin Icon
+              // Header with Handcrafted Glass Note Icon
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
@@ -387,7 +524,41 @@ class _GlassNotesSheetContent extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 16),
+
+              // Quick Category Filter Chips
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      _buildFilterChip(
+                        id: null,
+                        label: 'Semua',
+                        icon: '📋',
+                        isSelected: _selectedCategory == null,
+                        isDark: isDark,
+                      ),
+                      const SizedBox(width: 6),
+                      ...kNoteCategories.map((cat) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: _buildFilterChip(
+                            id: cat.id,
+                            label: cat.label,
+                            icon: cat.icon,
+                            isSelected: _selectedCategory == cat.id,
+                            isDark: isDark,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+
+              const Divider(height: 8),
 
               // Notes List
               Expanded(
@@ -399,13 +570,18 @@ class _GlassNotesSheetContent extends ConsumerWidget {
                       style: GoogleFonts.inter(color: AppColors.expense(context)),
                     ),
                   ),
-                  data: (notes) {
-                    if (notes.isEmpty) {
+                  data: (allNotes) {
+                    // Filter by selected category if any
+                    final filteredNotes = _selectedCategory == null
+                        ? allNotes
+                        : allNotes.where((n) => n.category == _selectedCategory).toList();
+
+                    if (allNotes.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const CustomGlassPinIcon(size: 44),
+                            const CustomGlassPinIcon(size: 46),
                             const SizedBox(height: 14),
                             Text(
                               'Belum ada catatan pengingat',
@@ -417,7 +593,7 @@ class _GlassNotesSheetContent extends ConsumerWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Tulis tagihan, rencana, atau jadwalkan jam pengingat',
+                              'Tulis tagihan, belanja, target, atau atur jam pengingat',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: AppColors.textSecondary(context),
@@ -428,14 +604,51 @@ class _GlassNotesSheetContent extends ConsumerWidget {
                       );
                     }
 
-                    final now = DateTime.now();
-                    final dueNotes = notes.where((n) => n.isDueNow(now)).toList();
+                    if (filteredNotes.isEmpty) {
+                      final catMeta = getCategoryMeta(_selectedCategory);
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              catMeta?.icon ?? '📝',
+                              style: const TextStyle(fontSize: 40),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Belum ada catatan ${catMeta?.label ?? ""}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Tulis di bawah dan pilih tag ${catMeta?.label ?? ""}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                    return Column(
+                    final now = DateTime.now();
+                    final dueNotes = filteredNotes.where((n) => n.isDueNow(now)).toList();
+                    final activeNotes = filteredNotes.where((n) => !n.done).toList();
+                    final completedNotes = filteredNotes.where((n) => n.done).toList();
+
+                    return ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                      physics: const BouncingScrollPhysics(),
                       children: [
+                        // Due notification alert banner
                         if (dueNotes.isNotEmpty)
                           Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
                               color: AppColors.income(context).withValues(alpha: isDark ? 0.16 : 0.12),
@@ -477,28 +690,167 @@ class _GlassNotesSheetContent extends ConsumerWidget {
                                 ),
                               ],
                             ),
-                          ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.1, end: 0),
-                        Expanded(
-                          child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            itemCount: notes.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (context, i) {
-                              final note = notes[i];
-                              return _NoteItemTile(note: note);
-                            },
+                          ).animate().fadeIn(duration: 300.ms),
+
+                        // Section: Catatan Aktif
+                        if (activeNotes.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Text(
+                                'Catatan Aktif',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${activeNotes.length}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary(context),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          ...activeNotes.map((note) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _NoteItemTile(note: note),
+                              )),
+                        ],
+
+                        // Section: Terselesaikan (Collapsible)
+                        if (completedNotes.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _showCompletedSection = !_showCompletedSection;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _showCompletedSection
+                                        ? Icons.keyboard_arrow_down_rounded
+                                        : Icons.keyboard_arrow_right_rounded,
+                                    size: 18,
+                                    color: AppColors.textSecondary(context),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Terselesaikan',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.4,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '${completedNotes.length}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textSecondary(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_showCompletedSection) ...[
+                            const SizedBox(height: 6),
+                            ...completedNotes.map((note) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _NoteItemTile(note: note),
+                                )),
+                          ],
+                        ],
                       ],
                     );
                   },
                 ),
               ),
 
-              // Add Note Quick Bar with Reminder Selector
-              _AddNoteInputBar(ref: ref),
+              // Add Note Quick Bar with Category Selector & Reminder
+              _AddNoteInputBar(
+                ref: ref,
+                initialCategory: _selectedCategory,
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String? id,
+    required String label,
+    required String icon,
+    required bool isSelected,
+    required bool isDark,
+  }) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedCategory = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? Colors.white : const Color(0xFF0F172A))
+              : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 12.5)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? (isDark ? const Color(0xFF0A0D14) : Colors.white)
+                    : AppColors.textPrimary(context),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -514,20 +866,21 @@ class _NoteItemTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = AppColors.isDark(context);
     final isDue = note.isDueNow(DateTime.now());
+    final catMeta = getCategoryMeta(note.category);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: note.done
-            ? (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03))
-            : (isDark ? AppColors.surface.withValues(alpha: 0.7) : Colors.white),
-        borderRadius: BorderRadius.circular(16),
+            ? (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.025))
+            : (isDark ? AppColors.surface.withValues(alpha: 0.72) : Colors.white),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: note.done
               ? Colors.transparent
               : isDue
                   ? AppColors.income(context).withValues(alpha: 0.75)
-                  : (isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0x180F172A)),
+                  : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0x180F172A)),
           width: isDue && !note.done ? 1.5 : 1,
         ),
       ),
@@ -537,6 +890,7 @@ class _NoteItemTile extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Checkbox Toggle
               InkWell(
                 onTap: () => ref.read(stickyNotesProvider.notifier).toggle(note.id),
                 borderRadius: BorderRadius.circular(999),
@@ -553,31 +907,75 @@ class _NoteItemTile extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
+
+              // Category Micro Badge (if tagged)
+              if (catMeta != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: catMeta.color(isDark).withValues(alpha: isDark ? 0.20 : 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: catMeta.color(isDark).withValues(alpha: 0.35),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(catMeta.icon, style: const TextStyle(fontSize: 10.5)),
+                      const SizedBox(width: 3.5),
+                      Text(
+                        catMeta.label,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: catMeta.color(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              // Note Text
               Expanded(
                 child: Text(
                   note.text,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color: note.done
-                        ? AppColors.textSecondary(context).withValues(alpha: 0.6)
+                        ? AppColors.textSecondary(context).withValues(alpha: 0.55)
                         : AppColors.textPrimary(context),
                     decoration: note.done ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
+
+              // Edit Button
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                color: AppColors.textSecondary(context).withValues(alpha: 0.7),
+                visualDensity: VisualDensity.compact,
+                onPressed: () => _showEditNoteModal(context, ref, note),
+              ),
+
+              // Delete Button
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
                 color: AppColors.expense(context).withValues(alpha: 0.7),
+                visualDensity: VisualDensity.compact,
                 onPressed: () => ref.read(stickyNotesProvider.notifier).remove(note.id),
               ),
             ],
           ),
 
-          // Reminder Chip row if note has active reminder
+          // Reminder Chip row if note has active reminder or prompt to add
           Padding(
-            padding: const EdgeInsets.only(left: 36, top: 4),
+            padding: const EdgeInsets.only(left: 34, top: 4),
             child: Row(
               children: [
                 if (note.hasReminder) ...[
@@ -639,7 +1037,7 @@ class _NoteItemTile extends ConsumerWidget {
                           Text(
                             isDue ? 'Waktunya! • ${note.reminderLabel}' : note.reminderLabel,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: AppColors.income(context),
                             ),
@@ -683,7 +1081,7 @@ class _NoteItemTile extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '+ Atur Jam Pengingat',
+                            '+ Pasang Pengingat',
                             style: TextStyle(
                               fontSize: 11,
                               color: AppColors.textSecondary(context).withValues(alpha: 0.8),
@@ -705,8 +1103,12 @@ class _NoteItemTile extends ConsumerWidget {
 
 class _AddNoteInputBar extends StatefulWidget {
   final WidgetRef ref;
+  final String? initialCategory;
 
-  const _AddNoteInputBar({required this.ref});
+  const _AddNoteInputBar({
+    required this.ref,
+    this.initialCategory,
+  });
 
   @override
   State<_AddNoteInputBar> createState() => _AddNoteInputBarState();
@@ -719,12 +1121,28 @@ class _AddNoteInputBarState extends State<_AddNoteInputBar> {
   DateTime? _reminderDate;
   bool _isDaily = false;
   bool _hasReminder = false;
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialCategory;
+  }
+
+  @override
+  void didUpdateWidget(covariant _AddNoteInputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCategory != oldWidget.initialCategory && widget.initialCategory != null) {
+      _selectedCategory = widget.initialCategory;
+    }
+  }
 
   void _submit() {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
     widget.ref.read(stickyNotesProvider.notifier).addNote(
       text: text,
+      category: _selectedCategory,
       reminderHour: _hasReminder ? _reminderHour : null,
       reminderMinute: _hasReminder ? _reminderMinute : null,
       reminderDate: _hasReminder ? _reminderDate : null,
@@ -789,6 +1207,62 @@ class _AddNoteInputBarState extends State<_AddNoteInputBar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Category selector chips row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                ...kNoteCategories.map((cat) {
+                  final isCatSelected = _selectedCategory == cat.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6, bottom: 8),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = isCatSelected ? null : cat.id;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isCatSelected
+                              ? cat.color(isDark).withValues(alpha: isDark ? 0.25 : 0.16)
+                              : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isCatSelected
+                                ? cat.color(isDark)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(cat.icon, style: const TextStyle(fontSize: 11)),
+                            const SizedBox(width: 4),
+                            Text(
+                              cat.label,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isCatSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isCatSelected
+                                    ? cat.color(isDark)
+                                    : AppColors.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+
           Row(
             children: [
               Expanded(
@@ -803,7 +1277,9 @@ class _AddNoteInputBarState extends State<_AddNoteInputBar> {
                     color: AppColors.textPrimary(context),
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Tulis catatan pengingat...',
+                    hintText: _selectedCategory != null
+                        ? 'Tulis ${getCategoryMeta(_selectedCategory)?.label.toLowerCase()}...'
+                        : 'Tulis catatan pengingat...',
                     hintStyle: GoogleFonts.inter(
                       fontSize: 14,
                       color: AppColors.textSecondary(context),
@@ -921,6 +1397,184 @@ class _AddNoteInputBarState extends State<_AddNoteInputBar> {
       ),
     );
   }
+}
+
+/// Edit Note Dialog / BottomSheet
+void _showEditNoteModal(BuildContext context, WidgetRef ref, StickyNote note) {
+  final isDark = AppColors.isDark(context);
+  final textController = TextEditingController(text: note.text);
+  String? editCategory = note.category;
+  int? editHour = note.reminderHour;
+  int? editMinute = note.reminderMinute;
+  DateTime? editDate = note.reminderDate;
+  bool editDaily = note.isDaily;
+  bool editHasReminder = note.hasReminder;
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF131826) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Ubah Catatan',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Category Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...kNoteCategories.map((cat) {
+                          final isCatSelected = editCategory == cat.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6, bottom: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setModalState(() {
+                                  editCategory = isCatSelected ? null : cat.id;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: isCatSelected
+                                      ? cat.color(isDark).withValues(alpha: isDark ? 0.25 : 0.16)
+                                      : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isCatSelected ? cat.color(isDark) : Colors.transparent,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(cat.icon, style: const TextStyle(fontSize: 11)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      cat.label,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: isCatSelected ? FontWeight.w800 : FontWeight.w600,
+                                        color: isCatSelected ? cat.color(isDark) : AppColors.textSecondary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  // Text input
+                  TextField(
+                    controller: textController,
+                    maxLength: kNoteMaxLength,
+                    maxLines: 3,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppColors.textPrimary(context),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Tulis isi catatan...',
+                      filled: true,
+                      fillColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Batal'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final newText = textController.text.trim();
+                            if (newText.isNotEmpty) {
+                              ref.read(stickyNotesProvider.notifier).updateNoteDetails(
+                                id: note.id,
+                                text: newText,
+                                category: editCategory,
+                                reminderHour: editHasReminder ? editHour : null,
+                                reminderMinute: editHasReminder ? editMinute : null,
+                                reminderDate: editHasReminder ? editDate : null,
+                                isDaily: editDaily,
+                                hasReminder: editHasReminder,
+                              );
+                            }
+                            Navigator.pop(ctx);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                            foregroundColor: isDark ? const Color(0xFF0A0D14) : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 /// Frosted Glass Modal for configuring reminder time & recurrence
@@ -1514,7 +2168,7 @@ class FloatingNoteButton extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Handcrafted Unique Custom Glass Pin Icon
+                    // Handcrafted Luxury Stationery Memo Note Icon
                     const CustomGlassPinIcon(size: 18),
                     const SizedBox(width: 8),
                     Text(

@@ -57,7 +57,7 @@ class GlassBackground extends ConsumerWidget {
         if (imagePath != null)
           Positioned.fill(
             child: Opacity(
-              opacity: isDark ? 0.78 : 0.15,
+              opacity: isDark ? 0.78 : 0.75,
               child: isFromFile
                   ? Image.file(
                       File(imagePath),
@@ -72,24 +72,29 @@ class GlassBackground extends ConsumerWidget {
             ),
           ),
 
-        // Subtle dark vignette gradient overlay in dark mode to ensure text contrast and elegance
-        if (isDark)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.28),
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.45),
-                  ],
-                  stops: const [0.0, 0.4, 1.0],
-                ),
+        // Vignette gradient overlay matching concept in both Dark Mode & Light Mode
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [
+                        Colors.black.withValues(alpha: 0.28),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.45),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.35),
+                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.45),
+                      ],
+                stops: const [0.0, 0.4, 1.0],
               ),
             ),
           ),
+        ),
 
         // Radiant Orb 1: Top-Left Emerald Aura (Uang & Pertumbuhan)
         Positioned(
@@ -256,19 +261,22 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: customFill == null && isDark ? null : fill,
+            color: fill,
             gradient: customFill == null && isDark
-                ? const LinearGradient(
+                ? LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0x1FFFFFFF), Color(0x08FFFFFF)],
+                    colors: [
+                      const Color(0xFF1B2236).withValues(alpha: 0.78),
+                      const Color(0xFF131826).withValues(alpha: 0.72),
+                    ],
                   )
                 : null,
             borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: border, width: 1),
+            border: Border.all(color: border, width: 1.1),
             boxShadow: [
               BoxShadow(
-                color: isDark ? const Color(0x33000000) : const Color(0x0C0F172A),
+                color: isDark ? const Color(0x40000000) : const Color(0x0C0F172A),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),

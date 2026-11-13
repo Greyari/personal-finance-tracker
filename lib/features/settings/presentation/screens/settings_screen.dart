@@ -124,6 +124,39 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 onTap: () => Navigator.pop(ctx, ImageSource.camera),
               ),
+              if (ref.read(appWallpaperProvider).customFilePath != null) ...[
+                const SizedBox(height: 10),
+                ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  tileColor: AppColors.expense(context).withValues(alpha: isDark ? 0.12 : 0.08),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.expense(context).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.delete_outline_rounded, color: AppColors.expense(context)),
+                  ),
+                  title: Text(
+                    'Hapus Foto Wallpaper',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.expense(context),
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Kembalikan ke wallpaper default Ghibli Klasik',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _confirmDeleteCustomWallpaper(context, ref);
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -199,9 +232,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 88),
-        children: [
+      body: ScrollConfiguration(
+        behavior: const ScrollBehavior().copyWith(overscroll: false),
+        child: ListView(
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 88),
+          children: [
           // Profile Card
           profileAsync.when(
             data: (profile) => GlassCard(
@@ -333,87 +369,53 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.wallpaper_rounded, size: 20, color: primaryColor),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Wallpaper Latar Belakang',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          ),
+                    Icon(Icons.wallpaper_rounded, size: 20, color: primaryColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Wallpaper Latar Belakang',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                         ),
-                      ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (currentWallpaper.customFilePath != null) ...[
-                          InkWell(
-                            onTap: () => _confirmDeleteCustomWallpaper(context, ref),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.expense(context).withValues(alpha: isDark ? 0.15 : 0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.expense(context).withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.expense(context)),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Hapus Foto',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.expense(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        InkWell(
-                          onTap: () => _pickCustomWallpaper(context, ref),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => _pickCustomWallpaper(context, ref),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: isDark ? 0.15 : 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: isDark ? 0.15 : 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: primaryColor.withValues(alpha: 0.3),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              currentWallpaper.customFilePath != null
+                                  ? Icons.autorenew_rounded
+                                  : Icons.add_photo_alternate_rounded,
+                              size: 14,
+                              color: primaryColor,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              currentWallpaper.customFilePath != null ? 'Ganti Foto' : 'Upload Foto',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: primaryColor,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add_photo_alternate_rounded, size: 14, color: primaryColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  currentWallpaper.customFilePath != null ? 'Ganti Foto' : 'Upload Foto',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -571,7 +573,8 @@ class SettingsScreen extends ConsumerWidget {
           ).animate().fadeIn(duration: 450.ms),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildWallpaperItem({
@@ -612,6 +615,7 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
+                  clipBehavior: Clip.antiAlias,
                   child: Container(
                     height: 110,
                     width: double.infinity,
@@ -643,21 +647,21 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 if (onDelete != null)
                   Positioned(
-                    top: 4,
-                    right: 4,
+                    top: 6,
+                    right: 6,
                     child: InkWell(
                       onTap: onDelete,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.70),
+                          color: Colors.black.withValues(alpha: 0.78),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.delete_outline_rounded,
                           size: 14,
-                          color: Colors.redAccent,
+                          color: Color(0xFFF87171),
                         ),
                       ),
                     ),

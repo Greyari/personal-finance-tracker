@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/category_icons.dart';
@@ -571,10 +572,14 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 48,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              SizedBox(
+                width: 86,
+                height: 68,
+                child: Lottie.asset(
+                  'assets/lottie/cat_mascot.json',
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
