@@ -139,8 +139,8 @@ service cloud.firestore {
         && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
         && isValidChat(request.resource.data);
 
-      // Chat deletion is denied to preserve audit/conversation history
-      allow delete: if false;
+      // Chat deletion allowed for participants of the chat room
+      allow delete: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
 
       // -----------------------------------------------------------------------
       // Nested Messages Subcollection: /chats/{chatId}/messages/{messageId}
@@ -197,8 +197,8 @@ service cloud.firestore {
           && (request.resource.data.text == resource.data.text || resource.data.senderId == request.auth.uid)
           && isValidMessage(request.resource.data);
 
-        // Only the message sender can delete their own message
-        allow delete: if isChatParticipant() && resource.data.senderId == request.auth.uid;
+        // Chat participants can delete messages in their 1-on-1 chat room
+        allow delete: if isChatParticipant();
       }
     }
 

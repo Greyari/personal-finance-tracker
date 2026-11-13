@@ -36,6 +36,33 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   bool _isSending = false;
   bool _hasText = false;
   ChatMessageModel? _editingMessage;
+  final Set<String> _selectedMessageIds = {};
+
+  bool get _isSelectionMode => _selectedMessageIds.isNotEmpty;
+
+  void _toggleSelectMessage(String messageId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedMessageIds.contains(messageId)) {
+        _selectedMessageIds.remove(messageId);
+      } else {
+        _selectedMessageIds.add(messageId);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedMessageIds.clear();
+    });
+  }
+
+  void _selectAllMessages(List<ChatMessageModel> messages) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedMessageIds.addAll(messages.map((m) => m.id));
+    });
+  }
 
   @override
   void initState() {
@@ -156,6 +183,152 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     } catch (e) {
       if (mounted) {
         showGlassSnackBar(context, 'Gagal menghapus pesan. Coba lagi.', isError: true);
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedMessages() async {
+    if (_selectedMessageIds.isEmpty) return;
+    final count = _selectedMessageIds.length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF131826) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+          ),
+        ),
+        title: Text(
+          count == 1 ? 'Hapus 1 Pesan?' : 'Hapus $count Pesan?',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16.5,
+            fontWeight: FontWeight.w700,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+        ),
+        content: Text(
+          count == 1
+              ? 'Pesan ini akan dihapus secara permanen untuk kedua belah pihak.'
+              : '$count pesan yang dipilih akan dihapus secara permanen untuk kedua belah pihak.',
+          style: TextStyle(
+            fontSize: 13.5,
+            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Batal',
+              style: TextStyle(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Hapus',
+              style: TextStyle(
+                color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final idsToDelete = _selectedMessageIds.toList();
+    _clearSelection();
+
+    try {
+      await ref.read(chatRepositoryProvider).deleteMultipleMessages(
+            chatId: widget.chatRoom.id,
+            messageIds: idsToDelete,
+          );
+      if (mounted) {
+        showGlassSnackBar(
+          context,
+          count == 1 ? '1 pesan berhasil dihapus' : '$count pesan berhasil dihapus',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassSnackBar(context, 'Gagal menghapus pesan: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _handleClearChat() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF131826) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+          ),
+        ),
+        title: Text(
+          'Bersihkan Seluruh Obrolan?',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16.5,
+            fontWeight: FontWeight.w700,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          ),
+        ),
+        content: Text(
+          'Semua pesan obrolan dalam ruangan ini akan dihapus secara permanen untuk kedua belah pihak.',
+          style: TextStyle(
+            fontSize: 13.5,
+            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Batal',
+              style: TextStyle(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Bersihkan',
+              style: TextStyle(
+                color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(chatRepositoryProvider).clearChatRoom(chatId: widget.chatRoom.id);
+      if (mounted) {
+        showGlassSnackBar(context, 'Seluruh obrolan berhasil dibersihkan');
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassSnackBar(context, 'Gagal membersihkan obrolan: $e', isError: true);
       }
     }
   }
@@ -391,52 +564,129 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         titleSpacing: 0,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 19,
-              backgroundColor: const Color(0xFF34D399).withValues(alpha: isDark ? 0.25 : 0.15),
-              backgroundImage: widget.partner.photoUrl != null
-                  ? NetworkImage(widget.partner.photoUrl!)
-                  : null,
-              child: widget.partner.photoUrl == null
-                  ? Text(
-                      widget.partner.displayName.isNotEmpty
-                          ? widget.partner.displayName[0].toUpperCase()
-                          : 'P',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: _clearSelection,
+                tooltip: 'Batal Pilih',
+              )
+            : null,
+        title: _isSelectionMode
+            ? Text(
+                '${_selectedMessageIds.length} dipilih',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              )
+            : Row(
                 children: [
-                  Text(
-                    widget.partner.displayName,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    ),
+                  CircleAvatar(
+                    radius: 19,
+                    backgroundColor: const Color(0xFF34D399).withValues(alpha: isDark ? 0.25 : 0.15),
+                    backgroundImage: widget.partner.photoUrl != null
+                        ? NetworkImage(widget.partner.photoUrl!)
+                        : null,
+                    child: widget.partner.photoUrl == null
+                        ? Text(
+                            widget.partner.displayName.isNotEmpty
+                                ? widget.partner.displayName[0].toUpperCase()
+                                : 'P',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                            ),
+                          )
+                        : null,
                   ),
-                  Text(
-                    widget.partner.email,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.partner.displayName,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        Text(
+                          widget.partner.email,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
+        actions: _isSelectionMode
+            ? [
+                messagesAsync.maybeWhen(
+                  data: (msgs) => IconButton(
+                    icon: const Icon(Icons.select_all_rounded),
+                    tooltip: 'Pilih Semua',
+                    onPressed: () => _selectAllMessages(msgs),
+                  ),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                  ),
+                  tooltip: 'Hapus Pesan Terpilih',
+                  onPressed: _deleteSelectedMessages,
+                ),
+                const SizedBox(width: 4),
+              ]
+            : [
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded),
+                  color: isDark ? const Color(0xFF131826) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+                    ),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'clear') {
+                      _handleClearChat();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'clear',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_sweep_rounded,
+                            size: 19,
+                            color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Bersihkan Obrolan',
+                            style: TextStyle(
+                              color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+              ],
       ),
       body: Column(
         children: [
@@ -494,14 +744,18 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     itemBuilder: (context, index) {
                       final message = messages[index];
                       final isMe = message.senderId == currentUser?.uid;
+                      final isSelected = _selectedMessageIds.contains(message.id);
 
                       return _ChatBubble(
                         message: message,
                         isMe: isMe,
                         isDark: isDark,
+                        isSelected: isSelected,
+                        isSelectionMode: _isSelectionMode,
                         currentUserId: currentUser?.uid ?? '',
                         onEdit: _startEditing,
                         onDelete: _handleDelete,
+                        onToggleSelect: () => _toggleSelectMessage(message.id),
                       );
                     },
                   ),
@@ -540,6 +794,9 @@ class _ChatBubble extends ConsumerWidget {
   final bool isMe;
   final bool isDark;
   final String currentUserId;
+  final bool isSelected;
+  final bool isSelectionMode;
+  final VoidCallback? onToggleSelect;
   final void Function(ChatMessageModel message)? onEdit;
   final void Function(ChatMessageModel message)? onDelete;
 
@@ -548,6 +805,9 @@ class _ChatBubble extends ConsumerWidget {
     required this.isMe,
     required this.isDark,
     required this.currentUserId,
+    this.isSelected = false,
+    this.isSelectionMode = false,
+    this.onToggleSelect,
     this.onEdit,
     this.onDelete,
   });
@@ -633,6 +893,26 @@ class _ChatBubble extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  ListTile(
+                    dense: true,
+                    leading: Icon(
+                      Icons.checklist_rounded,
+                      size: 20,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                    title: Text(
+                      'Pilih Pesan',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      onToggleSelect?.call();
+                    },
+                  ),
                   if (message.text.isNotEmpty && message.text != '📷 Foto')
                     ListTile(
                       dense: true,
@@ -710,153 +990,210 @@ class _ChatBubble extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timeStr = DateFormat('HH:mm').format(message.createdAt);
 
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: () => _showMessageOptions(context, ref),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.76,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: isMe
-                ? (isDark
-                    ? const Color(0xFF1B2236).withValues(alpha: 0.95)
-                    : const Color(0xFF0F172A).withValues(alpha: 0.90))
-                : (isDark
-                    ? const Color(0xFF131826).withValues(alpha: 0.82)
-                    : Colors.white.withValues(alpha: 0.92)),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: Radius.circular(isMe ? 18 : 4),
-              bottomRight: Radius.circular(isMe ? 4 : 18),
-            ),
-            border: Border.all(
-              color: isMe
-                  ? const Color(0xFF34D399).withValues(alpha: isDark ? 0.35 : 0.20)
-                  : (isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (isSelectionMode && !isMe) ...[
+            GestureDetector(
+              onTap: onToggleSelect,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: isSelected
+                      ? const Color(0xFF34D399)
+                      : (isDark ? Colors.white38 : Colors.black38),
+                  size: 22,
+                ),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (message.imageUrl != null && message.imageUrl!.isNotEmpty) ...[
-                _ChatImageContent(
-                  imageUrl: message.imageUrl!,
-                  isDark: isDark,
+            ),
+          ],
+          Flexible(
+            child: GestureDetector(
+              onTap: () {
+                if (isSelectionMode) {
+                  onToggleSelect?.call();
+                } else {
+                  _showMessageOptions(context, ref);
+                }
+              },
+              onLongPress: () {
+                onToggleSelect?.call();
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.74,
                 ),
-                if (message.text.isNotEmpty && message.text != '📷 Foto')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      message.text,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        height: 1.35,
-                        color: isMe
-                            ? Colors.white
-                            : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                      ),
-                    ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (isDark
+                          ? const Color(0xFF34D399).withValues(alpha: 0.25)
+                          : const Color(0xFF059669).withValues(alpha: 0.16))
+                      : (isMe
+                          ? (isDark
+                              ? const Color(0xFF1B2236).withValues(alpha: 0.95)
+                              : const Color(0xFF0F172A).withValues(alpha: 0.90))
+                          : (isDark
+                              ? const Color(0xFF131826).withValues(alpha: 0.82)
+                              : Colors.white.withValues(alpha: 0.92))),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(isMe ? 18 : 4),
+                    bottomRight: Radius.circular(isMe ? 4 : 18),
                   ),
-              ] else ...[
-                Text(
-                  message.text,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
-                    color: isMe
-                        ? Colors.white
-                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF34D399)
+                        : (isMe
+                            ? const Color(0xFF34D399).withValues(alpha: isDark ? 0.35 : 0.20)
+                            : (isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight)),
+                    width: isSelected ? 1.6 : 1.0,
                   ),
-                ),
-              ],
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    timeStr,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: isMe
-                          ? Colors.white.withValues(alpha: 0.65)
-                          : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                    ),
-                  ),
-                  if (message.isEdited) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      '· diedit',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontStyle: FontStyle.italic,
-                        color: isMe
-                            ? Colors.white.withValues(alpha: 0.60)
-                            : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isSelected
+                          ? const Color(0xFF34D399).withValues(alpha: 0.2)
+                          : Colors.black.withValues(alpha: isDark ? 0.18 : 0.04),
+                      blurRadius: isSelected ? 10 : 8,
+                      offset: const Offset(0, 3),
                     ),
                   ],
-                  if (isMe) ...[
-                    const SizedBox(width: 4),
-                    _buildCheckmarkIcon(message, isDark),
-                  ],
-                ],
-              ),
-              if (message.reactions.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: () => _showMessageOptions(context, ref),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0A0D14).withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
-                        width: 1,
+                ),
+                child: Column(
+                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.imageUrl != null && message.imageUrl!.isNotEmpty) ...[
+                      _ChatImageContent(
+                        imageUrl: message.imageUrl!,
+                        isDark: isDark,
                       ),
-                    ),
-                    child: Row(
+                      if (message.text.isNotEmpty && message.text != '📷 Foto')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            message.text,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                              color: isMe
+                                  ? Colors.white
+                                  : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                            ),
+                          ),
+                        ),
+                    ] else ...[
+                      Text(
+                        message.text,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
+                          color: isMe
+                              ? Colors.white
+                              : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          message.reactions.values.toSet().join(' '),
-                          style: const TextStyle(fontSize: 13),
+                          timeStr,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isMe
+                                ? Colors.white.withValues(alpha: 0.65)
+                                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          ),
                         ),
-                        if (message.reactions.length > 1) ...[
+                        if (message.isEdited) ...[
                           const SizedBox(width: 4),
                           Text(
-                            '${message.reactions.length}',
+                            '· diedit',
                             style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white70 : Colors.black87,
+                              fontSize: 9.5,
+                              fontStyle: FontStyle.italic,
+                              color: isMe
+                                  ? Colors.white.withValues(alpha: 0.60)
+                                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                             ),
                           ),
                         ],
+                        if (isMe) ...[
+                          const SizedBox(width: 4),
+                          _buildCheckmarkIcon(message, isDark),
+                        ],
                       ],
                     ),
-                  ),
+                    if (message.reactions.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _showMessageOptions(context, ref),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0A0D14).withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                message.reactions.values.toSet().join(' '),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              if (message.reactions.length > 1) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${message.reactions.length}',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
+              ),
+            ),
           ),
-        ),
+          if (isSelectionMode && isMe) ...[
+            GestureDetector(
+              onTap: onToggleSelect,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  color: isSelected
+                      ? const Color(0xFF34D399)
+                      : (isDark ? Colors.white38 : Colors.black38),
+                  size: 22,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

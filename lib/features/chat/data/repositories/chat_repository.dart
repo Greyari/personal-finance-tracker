@@ -338,16 +338,28 @@ class ChatRepository {
     await batch.commit();
   }
 
-  /// Deletes a message permanently (by its sender).
+  /// Deletes a message permanently.
   Future<void> deleteMessage({
     required String chatId,
     required String messageId,
   }) async {
+    await deleteMultipleMessages(chatId: chatId, messageIds: [messageId]);
+  }
+
+  /// Deletes multiple messages at once using a Firestore batch write.
+  Future<void> deleteMultipleMessages({
+    required String chatId,
+    required List<String> messageIds,
+  }) async {
+    if (messageIds.isEmpty) return;
     final chatRef = _firestore.collection(FirestoreCollections.chats).doc(chatId);
     final messagesRef = chatRef.collection(FirestoreCollections.messages);
-    final msgRef = messagesRef.doc(messageId);
 
-    await msgRef.delete();
+    final batch = _firestore.batch();
+    for (final id in messageIds) {
+      batch.delete(messagesRef.doc(id));
+    }
+    await batch.commit();
 
     try {
       final remaining = await messagesRef.orderBy('createdAt', descending: true).limit(1).get();
@@ -361,12 +373,43 @@ class ChatRepository {
         });
       } else {
         await chatRef.update({
-          'lastMessage': 'Obrolan dimulai 👋',
+          'lastMessage': 'Obrolan dibersihkan 👋',
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
     } catch (_) {
       // Ignore if metadata update encounters error
     }
+  }
+
+  /// Clears all messages in a chat room while retaining the room connection.
+  Future<void> clearChatRoom({required String chatId}) async {
+    final chatRef = _firestore.collection(FirestoreCollections.chats).doc(chatId);
+    final messagesRef = chatRef.collection(FirestoreCollections.messages);
+    final snap = await messagesRef.limit(500).get();
+
+    final batch = _firestore.batch();
+    for (final doc in snap.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.update(chatRef, {
+      'lastMessage': 'Obrolan dibersihkan 👋',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+  }
+
+  /// Deletes an entire chat room and its messages completely.
+  Future<void> deleteChatRoom({required String chatId}) async {
+    final chatRef = _firestore.collection(FirestoreCollections.chats).doc(chatId);
+    final messagesRef = chatRef.collection(FirestoreCollections.messages);
+    final snap = await messagesRef.limit(500).get();
+
+    final batch = _firestore.batch();
+    for (final doc in snap.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(chatRef);
+    await batch.commit();
   }
 }

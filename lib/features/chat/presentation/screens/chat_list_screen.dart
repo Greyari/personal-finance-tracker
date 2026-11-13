@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -326,6 +327,171 @@ class ChatListScreen extends ConsumerWidget {
     );
   }
 
+  void _showRoomOptions(
+    BuildContext context,
+    WidgetRef ref,
+    ChatRoomModel room,
+    ChatParticipantInfo partner,
+  ) {
+    HapticFeedback.mediumImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF131826) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border.all(
+                color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Obrolan dengan ${partner.displayName}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ListTile(
+                    leading: const Icon(Icons.chat_bubble_outline_rounded),
+                    title: const Text('Buka Obrolan'),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ChatRoomScreen(
+                            chatRoom: room,
+                            partner: partner,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.delete_sweep_rounded,
+                      color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                    ),
+                    title: Text(
+                      'Bersihkan Riwayat Pesan',
+                      style: TextStyle(
+                        color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dCtx) => AlertDialog(
+                          backgroundColor: isDark ? const Color(0xFF131826) : Colors.white,
+                          title: const Text('Bersihkan Riwayat?'),
+                          content: const Text('Semua pesan dalam obrolan ini akan dihapus secara permanen.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(false),
+                              child: const Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(true),
+                              child: Text(
+                                'Bersihkan',
+                                style: TextStyle(
+                                  color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ref.read(chatRepositoryProvider).clearChatRoom(chatId: room.id);
+                        if (context.mounted) {
+                          showGlassSnackBar(context, 'Riwayat obrolan berhasil dibersihkan');
+                        }
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.delete_forever_rounded,
+                      color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                    ),
+                    title: Text(
+                      'Hapus Ruang Obrolan',
+                      style: TextStyle(
+                        color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dCtx) => AlertDialog(
+                          backgroundColor: isDark ? const Color(0xFF131826) : Colors.white,
+                          title: const Text('Hapus Obrolan?'),
+                          content: const Text('Ruang obrolan beserta seluruh pesannya akan dihapus secara permanen.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(false),
+                              child: const Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(dCtx).pop(true),
+                              child: Text(
+                                'Hapus',
+                                style: TextStyle(
+                                  color: isDark ? AppColors.expenseDark : AppColors.expenseLight,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ref.read(chatRepositoryProvider).deleteChatRoom(chatId: room.id);
+                        if (context.mounted) {
+                          showGlassSnackBar(context, 'Ruang obrolan telah dihapus');
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -440,6 +606,7 @@ class ChatListScreen extends ConsumerWidget {
                       ),
                     );
                   },
+                  onLongPress: () => _showRoomOptions(context, ref, room, partner),
                   borderRadius: BorderRadius.circular(20),
                   child: GlassCard(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
