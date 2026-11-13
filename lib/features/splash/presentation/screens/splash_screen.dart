@@ -184,12 +184,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                     // Brand Title with Cinematic Letter Spacing
                     Text(
-                      'PERSONAL FINANCE',
+                      'RERO',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
+                        fontSize: 26,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 4.5,
+                        letterSpacing: 6.0,
                         color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
                       ),
                     )

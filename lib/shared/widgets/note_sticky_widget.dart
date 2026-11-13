@@ -1955,7 +1955,7 @@ Future<Map<String, dynamic>?> _showReminderConfigModal({
                     onTap: () async {
                       await NotificationService().showInstantNotification(
                         id: 99999,
-                        title: 'Tes Pengingat Personal Finance',
+                        title: 'Tes Pengingat RERO',
                         body: 'Notifikasi berhasil muncul di bilah status HP Anda!',
                       );
                       if (ctx.mounted) {

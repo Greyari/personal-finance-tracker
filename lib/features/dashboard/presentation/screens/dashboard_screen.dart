@@ -74,7 +74,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              'Personal Finance',
+              'RERO',
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 19,

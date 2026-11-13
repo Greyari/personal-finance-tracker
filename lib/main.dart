@@ -64,7 +64,7 @@ class PersonalFinanceApp extends ConsumerWidget {
     final themeMode = ref.watch(themeNotifierProvider);
 
     return MaterialApp(
-      title: 'Personal Finance',
+      title: 'RERO',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

@@ -22,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
     final confirmed = await showGlassConfirmDialog(
       context: context,
       title: 'Keluar dari Akun',
-      message: 'Apakah Anda yakin ingin keluar dari akun Personal Finance?',
+      message: 'Apakah Anda yakin ingin keluar dari akun RERO?',
       confirmLabel: 'Keluar',
       cancelLabel: 'Batal',
       isDestructive: true,
