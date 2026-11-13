@@ -134,6 +134,7 @@ class ChatMessageModel {
   final String? imageUrl;
   final Map<String, String> reactions;
   final DateTime createdAt;
+  final bool isDelivered;
   final bool isRead;
   final String type;
   final bool isEdited;
@@ -148,6 +149,7 @@ class ChatMessageModel {
     this.imageUrl,
     this.reactions = const {},
     required this.createdAt,
+    this.isDelivered = false,
     this.isRead = false,
     this.type = 'text',
     this.isEdited = false,
@@ -161,6 +163,7 @@ class ChatMessageModel {
       'senderName': senderName,
       'text': text,
       'createdAt': Timestamp.fromDate(createdAt),
+      'isDelivered': isDelivered,
       'isRead': isRead,
       'type': type,
       'isEdited': isEdited,
@@ -198,6 +201,9 @@ class ChatMessageModel {
       });
     }
 
+    final isRead = data['isRead'] as bool? ?? false;
+    final isDelivered = data['isDelivered'] as bool? ?? isRead;
+
     return ChatMessageModel(
       id: doc.id,
       chatId: data['chatId'] as String? ?? '',
@@ -207,7 +213,8 @@ class ChatMessageModel {
       imageUrl: data['imageUrl'] as String?,
       reactions: parsedReactions,
       createdAt: parseDate(data['createdAt']),
-      isRead: data['isRead'] as bool? ?? false,
+      isDelivered: isDelivered,
+      isRead: isRead,
       type: data['type'] as String? ?? 'text',
       isEdited: data['isEdited'] as bool? ?? false,
       updatedAt: parseOptionalDate(data['updatedAt']),

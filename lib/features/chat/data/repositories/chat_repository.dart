@@ -250,15 +250,64 @@ class ChatRepository {
     }
   }
 
-  /// Resets unread counter for current user in the chat room.
+  /// Resets unread counter for current user in the chat room and marks messages as read.
   Future<void> markAsRead({required String chatId, required String userId}) async {
     try {
       final chatRef = _firestore.collection(FirestoreCollections.chats).doc(chatId);
-      await chatRef.update({
+      final messagesRef = chatRef.collection(FirestoreCollections.messages);
+
+      final batch = _firestore.batch();
+      batch.update(chatRef, {
         'unreadCount.$userId': 0,
       });
+
+      // Find partner messages that are unread
+      final unreadSnap = await messagesRef
+          .where('isRead', isEqualTo: false)
+          .limit(50)
+          .get();
+
+      for (final doc in unreadSnap.docs) {
+        if (doc.data()['senderId'] != userId) {
+          batch.update(doc.reference, {
+            'isRead': true,
+            'isDelivered': true,
+          });
+        }
+      }
+
+      await batch.commit();
     } catch (_) {
       // Ignore if document not yet created or permission denied
+    }
+  }
+
+  /// Automatically marks incoming messages as delivered when received by partner's device.
+  Future<void> markMessagesAsDelivered({required String chatId, required String userId}) async {
+    try {
+      final messagesRef = _firestore
+          .collection(FirestoreCollections.chats)
+          .doc(chatId)
+          .collection(FirestoreCollections.messages);
+
+      final undeliveredSnap = await messagesRef
+          .where('isDelivered', isEqualTo: false)
+          .limit(30)
+          .get();
+
+      if (undeliveredSnap.docs.isEmpty) return;
+
+      final batch = _firestore.batch();
+      for (final doc in undeliveredSnap.docs) {
+        if (doc.data()['senderId'] != userId) {
+          batch.update(doc.reference, {
+            'isDelivered': true,
+          });
+        }
+      }
+      await batch.commit();
+    } catch (_) {
+      // Ignore background delivery acknowledge error
     }
   }
 

@@ -370,6 +370,22 @@ class _ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final currentUser = ref.watch(currentUserProvider);
     final messagesAsync = ref.watch(chatMessagesStreamProvider(widget.chatRoom.id));
 
+    // Automatically mark incoming messages as read while room is open
+    ref.listen<AsyncValue<List<ChatMessageModel>>>(
+      chatMessagesStreamProvider(widget.chatRoom.id),
+      (prev, next) {
+        final messages = next.valueOrNull;
+        if (messages != null && messages.isNotEmpty && currentUser != null) {
+          final hasUnread = messages.any(
+            (m) => m.senderId != currentUser.uid && !m.isRead,
+          );
+          if (hasUnread) {
+            _markRead();
+          }
+        }
+      },
+    );
+
     return GlassScaffold(
       appBar: AppBar(
         titleSpacing: 0,
@@ -797,13 +813,7 @@ class _ChatBubble extends ConsumerWidget {
                   ],
                   if (isMe) ...[
                     const SizedBox(width: 4),
-                    Icon(
-                      message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                      size: 13,
-                      color: message.isRead
-                          ? const Color(0xFF34D399)
-                          : Colors.white.withValues(alpha: 0.65),
-                    ),
+                    _buildCheckmarkIcon(message, isDark),
                   ],
                 ],
               ),
@@ -849,6 +859,31 @@ class _ChatBubble extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildCheckmarkIcon(ChatMessageModel message, bool isDark) {
+    if (message.isRead) {
+      // Centang 2 Biru: Pesan sudah dibaca oleh pasangan
+      return const Icon(
+        Icons.done_all_rounded,
+        size: 14,
+        color: Color(0xFF38BDF8),
+      );
+    } else if (message.isDelivered) {
+      // Centang 2 Abu-abu: Pesan sudah sampai / diterima di HP pasangan
+      return Icon(
+        Icons.done_all_rounded,
+        size: 14,
+        color: isDark ? Colors.white.withValues(alpha: 0.65) : Colors.black.withValues(alpha: 0.45),
+      );
+    } else {
+      // Centang 1 Abu-abu: Pesan baru terkirim ke server
+      return Icon(
+        Icons.done_rounded,
+        size: 14,
+        color: isDark ? Colors.white.withValues(alpha: 0.65) : Colors.black.withValues(alpha: 0.45),
+      );
+    }
   }
 }
 

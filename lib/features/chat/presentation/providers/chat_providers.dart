@@ -61,6 +61,11 @@ final chatNotificationWatcherProvider = Provider<void>((ref) {
             messageText: chat.lastMessage,
             chatId: chat.id,
           );
+          // Acknowledge delivery to partner
+          ref.read(chatRepositoryProvider).markMessagesAsDelivered(
+                chatId: chat.id,
+                userId: user.uid,
+              );
         }
       }
     }

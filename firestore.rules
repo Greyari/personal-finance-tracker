@@ -37,6 +37,7 @@ rules_version = '2';
 //   - createdAt: timestamp (optional, immutable)
 //   - updatedAt: timestamp (optional)
 //   - isRead: bool (required)
+//   - isDelivered: bool (optional)
 //   - isEdited: bool (optional)
 //   - type: string in ['text', 'image'] (required, immutable)
 //   - reactions: map of uid -> emoji string (optional)
@@ -153,7 +154,7 @@ service cloud.firestore {
         }
 
         function isValidMessage(data) {
-          return data.keys().hasOnly(['chatId', 'senderId', 'senderName', 'text', 'createdAt', 'isRead', 'type', 'imageUrl', 'reactions', 'isEdited', 'updatedAt'])
+          return data.keys().hasOnly(['chatId', 'senderId', 'senderName', 'text', 'createdAt', 'isRead', 'isDelivered', 'type', 'imageUrl', 'reactions', 'isEdited', 'updatedAt'])
             && data.chatId == chatId
             && data.senderId is string
             && data.senderId.size() > 0
@@ -165,6 +166,7 @@ service cloud.firestore {
             && data.text.size() >= 0
             && data.text.size() <= 2000
             && data.isRead is bool
+            && (!('isDelivered' in data) || data.isDelivered is bool)
             && data.type in ['text', 'image']
             && (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() <= 200000))
             && (!('reactions' in data) || data.reactions is map)
@@ -181,7 +183,7 @@ service cloud.firestore {
           && request.resource.data.senderId == request.auth.uid
           && isValidMessage(request.resource.data);
 
-        // Participants can update message state (e.g. isRead, reactions).
+        // Participants can update message state (e.g. isRead, isDelivered, reactions).
         // Message text editing is strictly restricted to the original sender.
         // chatId, senderId, type, imageUrl, and createdAt remain immutable.
         allow update: if isChatParticipant()
